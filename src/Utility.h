@@ -1,10 +1,11 @@
-#ifndef CUSTOSH_MATRIX_H
-#define CUSTOSH_MATRIX_H
+#ifndef CUSTOSH_UTILITY_H
+#define CUSTOSH_UTILITY_H
 
 
 #include <array>
 #include <string>
 #include <sstream>
+#include <vector>
 
 namespace Custosh
 {
@@ -44,6 +45,16 @@ namespace Custosh
             return m_matrix.at(row).at(col);
         }
 
+        [[nodiscard]] unsigned int getNRows() const
+        {
+            return Rows;
+        }
+
+        [[nodiscard]] unsigned int getNCols() const
+        {
+            return Cols;
+        }
+
         virtual Matrix<T, Rows, Cols> operator*(const T& scalar) const
         {
             Matrix<T, Rows, Cols> result;
@@ -79,7 +90,7 @@ namespace Custosh
             return result;
         }
 
-        Matrix<T, Cols, Rows> transpose() const
+        [[nodiscard]] Matrix<T, Cols, Rows> transpose() const
         {
             Matrix<T, Cols, Rows> result;
 
@@ -106,7 +117,7 @@ namespace Custosh
             return oss.str();
         }
 
-        friend std::ostream& operator<<(std::ostream& os, Matrix<T, Rows, Cols> matrix)
+        friend std::ostream& operator<<(std::ostream& os, const Matrix<T, Rows, Cols>& matrix)
         {
             return os << matrix.toString();
         }
@@ -143,7 +154,7 @@ namespace Custosh
             return this->m_matrix.at(index).at(0);
         }
 
-        T dot(const Vector<T, Size>& other) const
+        [[nodiscard]] T dot(const Vector<T, Size>& other) const
         {
             return ((*this).transpose() * other)(0, 0);
         }
@@ -162,7 +173,37 @@ namespace Custosh
         {
         }
 
-        Vector3<T> cross(const Vector3<T>& other) const
+        T& x()
+        {
+            return (*this)(0);
+        }
+
+        [[nodiscard]] const T& x() const
+        {
+            return (*this)(0);
+        }
+
+        T& y()
+        {
+            return (*this)(1);
+        }
+
+        [[nodiscard]] const T& y() const
+        {
+            return (*this)(1);
+        }
+
+        T& z()
+        {
+            return (*this)(2);
+        }
+
+        [[nodiscard]] const T& z() const
+        {
+            return (*this)(2);
+        }
+
+        [[nodiscard]] Vector3<T> cross(const Vector3<T>& other) const
         {
             Vector3<T> result;
 
@@ -175,7 +216,93 @@ namespace Custosh
 
     }; // Vector3
 
+    template <typename T>
+    class ResizableMatrix {
+    public:
+        ResizableMatrix() : m_rows(0), m_cols(0)
+        {
+        }
+
+        ResizableMatrix(size_t rows, size_t cols) : m_rows(rows), m_cols(cols), m_matrix(rows, std::vector<T>(cols))
+        {
+        }
+
+        void resize(unsigned int newRows, unsigned int newCols) {
+            m_matrix.resize(newRows);
+            for (auto& row : m_matrix) {
+                row.resize(newCols);
+            }
+            m_rows = newRows;
+            m_cols = newCols;
+        }
+
+        T& operator()(unsigned int row, unsigned int col) {
+            return m_matrix.at(row).at(col);
+        }
+
+        const T& operator()(unsigned int row, unsigned int col) const {
+            return m_matrix.at(row).at(col);
+        }
+
+        [[nodiscard]] unsigned int getNRows() const {
+            return m_rows;
+        }
+
+        [[nodiscard]] unsigned int getNCols() const {
+            return m_cols;
+        }
+
+        [[nodiscard]] std::string toString() const
+        {
+            std::ostringstream oss;
+
+            for (unsigned int i = 0; i < m_rows; ++i) {
+                for (unsigned int j = 0; j < m_cols; ++j) {
+                    oss << m_matrix.at(i).at(j) << " ";
+                }
+                oss << "\n";
+            }
+
+            return oss.str();
+        }
+
+        friend std::ostream& operator<<(std::ostream& os, const ResizableMatrix& matrix)
+        {
+            return os << matrix.toString();
+        }
+
+    private:
+        std::vector<std::vector<T>> m_matrix;
+        unsigned int m_rows;
+        unsigned int m_cols;
+
+    }; // ResizableMatrix
+
+    struct triangle_t
+    {
+        Vector3<float> p0;
+        Vector3<float> p1;
+        Vector3<float> p2;
+
+    }; // triangle_t
+
+    struct boundingBox_t
+    {
+        int xMax;
+        int xMin;
+        int yMax;
+        int yMin;
+
+    }; // boundingBox_t
+
+    struct pixel_t
+    {
+        Vector3<float> coords;
+        float brightness = 0;
+
+    }; // pixel_t
+
 } // Custosh
 
 
-#endif // CUSTOSH_MATRIX_H
+#endif // CUSTOSH_UTILITY_H

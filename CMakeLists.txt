@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 20)
 include_directories(.)
 
 add_executable(Custosh
-        main.cpp
-        Matrix.h
+        src/main.cpp
+        src/Utility.h
+        src/Renderer.h
+        src/Renderer.cpp
+        src/Utility.h
+        src/CustoshExcept.h
 )

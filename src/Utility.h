@@ -57,7 +57,7 @@ namespace Custosh
 
         virtual Matrix<T, Rows, Cols> operator*(const T& scalar) const
         {
-            Matrix<T, Rows, Cols> result;
+            Matrix < T, Rows, Cols > result;
 
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < Cols; ++j) {
@@ -76,7 +76,7 @@ namespace Custosh
         template<unsigned int OtherCols>
         Matrix<T, Rows, OtherCols> operator*(const Matrix<T, Cols, OtherCols>& other) const
         {
-            Matrix<T, Rows, OtherCols> result;
+            Matrix < T, Rows, OtherCols > result;
 
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < OtherCols; ++j) {
@@ -92,7 +92,7 @@ namespace Custosh
 
         [[nodiscard]] Matrix<T, Cols, Rows> transpose() const
         {
-            Matrix<T, Cols, Rows> result;
+            Matrix < T, Cols, Rows > result;
 
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < Cols; ++j) {
@@ -127,11 +127,29 @@ namespace Custosh
 
     }; // Matrix
 
+    class PerspectiveMatrix : public Matrix<float, 4, 4>
+    {
+    public:
+        explicit PerspectiveMatrix(float nearPlaneDist, float farPlaneDist) : Matrix<float, 4, 4>()
+        {
+            (*this)(0, 0) = nearPlaneDist;
+            (*this)(1, 1) = nearPlaneDist;
+            (*this)(2, 2) = nearPlaneDist + farPlaneDist;
+            (*this)(2, 3) = -nearPlaneDist * farPlaneDist;
+            (*this)(3, 2) = 1.f;
+        }
+
+    }; // PerspectiveMatrix
+
     template<typename T, unsigned int Size>
     class Vector : public Matrix<T, Size, 1>
     {
     public:
         Vector() : Matrix<T, Size, 1>()
+        {
+        }
+
+        explicit Vector(Matrix<T, Size, 1> matrix) : Matrix<T, Size, 1>(matrix)
         {
         }
 
@@ -162,10 +180,60 @@ namespace Custosh
     }; // Vector
 
     template<typename T>
+    class Vector2 : public Vector<T, 2>
+    {
+    public:
+        Vector2() : Vector<T, 2>()
+        {
+        }
+
+        explicit Vector2(Vector<T, 2> vector) : Vector<T, 2>(vector)
+        {
+        }
+
+        explicit Vector2(Matrix<T, 2, 1> matrix) : Vector<T, 2>(matrix)
+        {
+        }
+
+        Vector2(const std::initializer_list<T>& init) : Vector<T, 2>(init)
+        {
+        }
+
+        T& x()
+        {
+            return (*this)(0);
+        }
+
+        [[nodiscard]] const T& x() const
+        {
+            return (*this)(0);
+        }
+
+        T& y()
+        {
+            return (*this)(1);
+        }
+
+        [[nodiscard]] const T& y() const
+        {
+            return (*this)(1);
+        }
+
+    }; // Vector2
+
+    template<typename T>
     class Vector3 : public Vector<T, 3>
     {
     public:
         Vector3() : Vector<T, 3>()
+        {
+        }
+
+        explicit Vector3(Vector<T, 3> vector) : Vector<T, 3>(vector)
+        {
+        }
+
+        explicit Vector3(Matrix<T, 3, 1> matrix) : Vector<T, 3>(matrix)
         {
         }
 
@@ -216,39 +284,122 @@ namespace Custosh
 
     }; // Vector3
 
-    template <typename T>
-    class ResizableMatrix {
+    template<typename T>
+    class Vector4 : public Vector<T, 4>
+    {
+    public:
+        Vector4() : Vector<T, 4>()
+        {
+        }
+
+        explicit Vector4(Vector<T, 4> vector) : Vector<T, 4>(vector)
+        {
+        }
+
+        explicit Vector4(Matrix<T, 4, 1> matrix) : Vector<T, 4>(matrix)
+        {
+        }
+
+        Vector4(const std::initializer_list<T>& init) : Vector<T, 4>(init)
+        {
+        }
+
+        T& x()
+        {
+            return (*this)(0);
+        }
+
+        [[nodiscard]] const T& x() const
+        {
+            return (*this)(0);
+        }
+
+        T& y()
+        {
+            return (*this)(1);
+        }
+
+        [[nodiscard]] const T& y() const
+        {
+            return (*this)(1);
+        }
+
+        T& z()
+        {
+            return (*this)(2);
+        }
+
+        [[nodiscard]] const T& z() const
+        {
+            return (*this)(2);
+        }
+
+        T& w()
+        {
+            return (*this)(3);
+        }
+
+        [[nodiscard]] const T& w() const
+        {
+            return (*this)(3);
+        }
+
+        [[nodiscard]] Vector4<T> normalizeW() const
+        {
+            Vector4<T> result;
+
+            result.x() = this->x() / this->w();
+            result.y() = this->y() / this->w();
+            result.z() = this->z() / this->w();
+            result.w() = 1;
+
+            return result;
+        }
+
+    }; // Vector4
+
+    template<typename T>
+    class ResizableMatrix
+    {
     public:
         ResizableMatrix() : m_rows(0), m_cols(0)
         {
         }
 
-        ResizableMatrix(size_t rows, size_t cols) : m_rows(rows), m_cols(cols), m_matrix(rows, std::vector<T>(cols))
+        ResizableMatrix(unsigned int rows, unsigned int cols)
+                : m_rows(rows),
+                  m_cols(cols),
+                  m_matrix(rows, std::vector<T>(cols))
         {
         }
 
-        void resize(unsigned int newRows, unsigned int newCols) {
+        void resize(unsigned int newRows, unsigned int newCols)
+        {
             m_matrix.resize(newRows);
-            for (auto& row : m_matrix) {
+            for (auto& row: m_matrix) {
                 row.resize(newCols);
             }
             m_rows = newRows;
             m_cols = newCols;
         }
 
-        T& operator()(unsigned int row, unsigned int col) {
+        T& operator()(unsigned int row, unsigned int col)
+        {
             return m_matrix.at(row).at(col);
         }
 
-        const T& operator()(unsigned int row, unsigned int col) const {
+        const T& operator()(unsigned int row, unsigned int col) const
+        {
             return m_matrix.at(row).at(col);
         }
 
-        [[nodiscard]] unsigned int getNRows() const {
+        [[nodiscard]] unsigned int getNRows() const
+        {
             return m_rows;
         }
 
-        [[nodiscard]] unsigned int getNCols() const {
+        [[nodiscard]] unsigned int getNCols() const
+        {
             return m_cols;
         }
 
@@ -278,13 +429,21 @@ namespace Custosh
 
     }; // ResizableMatrix
 
-    struct triangle_t
+    struct triangle3D_t
     {
-        Vector3<float> p0;
-        Vector3<float> p1;
-        Vector3<float> p2;
+        uint64_t UUID;
+        Vector4<float> p0;
+        Vector4<float> p1;
+        Vector4<float> p2;
+    };
 
-    }; // triangle_t
+    struct triangle2D_t
+    {
+        uint64_t UUID;
+        Vector2<float> p0;
+        Vector2<float> p1;
+        Vector2<float> p2;
+    };
 
     struct boundingBox_t
     {
@@ -293,14 +452,20 @@ namespace Custosh
         int yMax;
         int yMin;
 
-    }; // boundingBox_t
+    };
 
-    struct pixel_t
+    struct barycentricCoords_t
     {
-        Vector3<float> coords;
-        float brightness = 0;
+        float alpha;
+        float beta;
+        float gamma;
+    };
 
-    }; // pixel_t
+    struct pixel1_t
+    {
+        uint64_t triangleUUID;
+        barycentricCoords_t barycentricCoords;
+    };
 
 } // Custosh
 

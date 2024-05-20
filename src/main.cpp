@@ -31,11 +31,14 @@ int main()
     cubeInd.emplace_back(1, 5, 3);
     cubeInd.emplace_back(5, 7, 3);
 
+    cubeInd.emplace_back(0, 1, 5);
+    cubeInd.emplace_back(0, 4, 5);
+
     Custosh::Model cube(cubeVer, cubeInd);
 
     Custosh::ResizableMatrix<Custosh::pixel_t> screen(100, 100);
     Custosh::PerspectiveMatrix pm(100, 1000);
-    Custosh::lightSource_t ls = {.coords = {40, 60, 2, 1}, .maxDistanceSq = 25000};
+    Custosh::lightSource_t ls = {.coords = {40, 0, 90, 1}, .maxDistanceSq = 8000};
 
     float rotationAngle = Custosh::degreesToRadians(10);
 

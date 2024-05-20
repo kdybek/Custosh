@@ -165,7 +165,7 @@ namespace Custosh::Renderer
                     Vector4<float> projectedPoint = getCartesianCoords(triangle3D, bc, swap);
                     pixel_t& screenPoint = screen(i, j);
 
-                    if (!screenPoint.occupied || screenPoint.coords.z() < projectedPoint.z()) {
+                    if (!screenPoint.occupied || screenPoint.coords.z() > projectedPoint.z()) {
                         screenPoint.occupied = true;
                         screenPoint.coords = projectedPoint;
                     }

@@ -431,7 +431,6 @@ namespace Custosh
 
     struct triangle3D_t
     {
-        uint64_t UUID;
         Vector4<float> p0;
         Vector4<float> p1;
         Vector4<float> p2;
@@ -439,7 +438,6 @@ namespace Custosh
 
     struct triangle2D_t
     {
-        uint64_t UUID;
         Vector2<float> p0;
         Vector2<float> p1;
         Vector2<float> p2;
@@ -463,9 +461,15 @@ namespace Custosh
 
     struct pixel1_t
     {
-        uint64_t triangleUUID;
-        barycentricCoords_t barycentricCoords;
+        bool occupied;
+        Vector4<float> coords;
     };
+
+    inline std::ostream& operator<<(std::ostream& os, const pixel1_t& pixel)
+    {
+        if (pixel.occupied) { return os << "@"; }
+        else { return os << " "; }
+    }
 
 } // Custosh
 

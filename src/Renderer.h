@@ -6,8 +6,9 @@
 
 namespace Custosh::Renderer
 {
+    // triangle3D vertices must have w = 1
     void rasterizeTriangle(const triangle3D_t& triangle3D,
-                           ResizableMatrix<int>& screen,
+                           ResizableMatrix<pixel1_t>& screen,
                            const PerspectiveMatrix& pm);
 
 } // Custosh::Renderer

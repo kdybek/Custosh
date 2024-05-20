@@ -8,7 +8,7 @@ namespace Custosh::Renderer
 {
     namespace
     {
-        template <typename T>
+        template<typename T>
         boundingBox_t findBounds(const triangle2D_t& triangle2D,
                                  const ResizableMatrix<T>& screen)
         {
@@ -26,10 +26,10 @@ namespace Custosh::Renderer
                                    std::floor(triangle2D.p1.y()),
                                    std::floor(triangle2D.p2.y())});
 
-            boundingBox.xMax = std::min(static_cast<int>(xMax), static_cast<int>(screen.getNCols()));
-            boundingBox.xMin = std::min(static_cast<int>(xMin), 0);
-            boundingBox.yMax = std::min(static_cast<int>(yMax), static_cast<int>(screen.getNRows()));
-            boundingBox.yMin = std::min(static_cast<int>(yMin), 0);
+            boundingBox.xMax = std::min(static_cast<int>(xMax), static_cast<int>(screen.getNCols() - 1));
+            boundingBox.xMin = std::max(static_cast<int>(xMin), 0);
+            boundingBox.yMax = std::min(static_cast<int>(yMax), static_cast<int>(screen.getNRows() - 1));
+            boundingBox.yMin = std::max(static_cast<int>(yMin), 0);
             return boundingBox;
         }
 
@@ -95,10 +95,23 @@ namespace Custosh::Renderer
                     1.f};
         }
 
+        float distanceSq(const Vector4<float>& a, const Vector4<float>& b)
+        {
+            return pow((a.x() - b.x()), 2) + pow((a.y() - b.y()), 2) + pow((a.z() - b.z()), 2);
+        }
+
+        float getPointBrightness(const Vector4<float>& p, const lightSource_t& ls)
+        {
+            float distSq = distanceSq(p, ls.coords);
+            float brightness = 1 - distSq / ls.maxDistanceSq;
+            if (brightness > 0) { return brightness; }
+            else { return 0; }
+        }
+
     } // anonymous
 
     void rasterizeTriangle(const triangle3D_t& triangle3D,
-                           ResizableMatrix<pixel1_t>& screen,
+                           ResizableMatrix<pixel_t>& screen,
                            const PerspectiveMatrix& pm)
     {
         triangle2D_t triangle2D = applyPerspectiveTriangle(triangle3D, pm);
@@ -112,15 +125,15 @@ namespace Custosh::Renderer
 
         boundingBox_t boundingBox = findBounds(triangle2D, screen);
 
-        for (int i = boundingBox.xMin; i <= boundingBox.xMax; ++i) {
-            for (int j = boundingBox.yMin; j <= boundingBox.yMax; ++j) {
+        for (int i = boundingBox.yMin; i <= boundingBox.yMax; ++i) {
+            for (int j = boundingBox.xMin; j <= boundingBox.xMax; ++j) {
 
                 if (inTriangle(triangle2D,
-                               Vector2<float>({static_cast<float>(i), static_cast<float>(j)}),
+                               Vector2<float>({static_cast<float>(j), static_cast<float>(i)}),
                                triangleArea,
                                bc)) {
                     Vector4<float> projectedPoint = getCartesianCoords(triangle3D, bc);
-                    pixel1_t& screenPoint = screen(j, i);
+                    pixel_t& screenPoint = screen(i, j);
 
                     if (!screenPoint.occupied || screenPoint.coords.z() < projectedPoint.z()) {
                         screenPoint.occupied = true;
@@ -129,7 +142,24 @@ namespace Custosh::Renderer
                 }
             }
         }
+    }
 
+    BrightnessMap getBrightnessMap(const ResizableMatrix<pixel_t>& screen,
+                                            const lightSource_t& ls)
+    {
+        BrightnessMap bMap(screen.getNRows(), screen.getNCols());
+
+        for (unsigned int i = 0; i < screen.getNRows(); ++i) {
+            for (unsigned int j = 0; j < screen.getNCols(); ++j) {
+                const pixel_t& screenPoint = screen(i, j);
+
+                if (screenPoint.occupied) {
+                    bMap(i, j) = getPointBrightness(screenPoint.coords, ls);
+                }
+            }
+        }
+
+        return bMap;
     }
 
 } // Custosh::Renderer

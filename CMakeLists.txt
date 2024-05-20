@@ -12,4 +12,5 @@ add_executable(Custosh
         src/Renderer.cpp
         src/Utility.h
         src/CustoshExcept.h
+        src/Utility.cpp
 )

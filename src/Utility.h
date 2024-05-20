@@ -5,10 +5,15 @@
 #include <array>
 #include <string>
 #include <sstream>
+#include <utility>
 #include <vector>
+#include <cmath>
+#include <numbers>
 
 namespace Custosh
 {
+    extern const std::string ASCIIByBrightness;
+
     template<typename T, unsigned int Rows, unsigned int Cols>
     class Matrix
     {
@@ -55,9 +60,9 @@ namespace Custosh
             return Cols;
         }
 
-        virtual Matrix<T, Rows, Cols> operator*(const T& scalar) const
+        Matrix<T, Rows, Cols> operator*(const T& scalar) const
         {
-            Matrix < T, Rows, Cols > result;
+            Matrix<T, Rows, Cols> result;
 
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < Cols; ++j) {
@@ -73,10 +78,23 @@ namespace Custosh
             return matrix * scalar;
         }
 
+        Matrix<T, Rows, Cols> operator+(const Matrix<T, Rows, Cols>& other) const
+        {
+            Matrix<T, Rows, Cols> result;
+
+            for (unsigned int i = 0; i < Rows; ++i) {
+                for (unsigned int j = 0; j < Cols; ++j) {
+                    result(i, j) = m_matrix.at(i).at(j) + other(i, j);
+                }
+            }
+
+            return result;
+        }
+
         template<unsigned int OtherCols>
         Matrix<T, Rows, OtherCols> operator*(const Matrix<T, Cols, OtherCols>& other) const
         {
-            Matrix < T, Rows, OtherCols > result;
+            Matrix<T, Rows, OtherCols> result;
 
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < OtherCols; ++j) {
@@ -92,7 +110,7 @@ namespace Custosh
 
         [[nodiscard]] Matrix<T, Cols, Rows> transpose() const
         {
-            Matrix < T, Cols, Rows > result;
+            Matrix<T, Cols, Rows> result;
 
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < Cols; ++j) {
@@ -101,25 +119,6 @@ namespace Custosh
             }
 
             return result;
-        }
-
-        [[nodiscard]] std::string toString() const
-        {
-            std::ostringstream oss;
-
-            for (unsigned int i = 0; i < Rows; ++i) {
-                for (unsigned int j = 0; j < Cols; ++j) {
-                    oss << m_matrix.at(i).at(j) << " ";
-                }
-                oss << "\n";
-            }
-
-            return oss.str();
-        }
-
-        friend std::ostream& operator<<(std::ostream& os, const Matrix<T, Rows, Cols>& matrix)
-        {
-            return os << matrix.toString();
         }
 
     protected:
@@ -175,6 +174,17 @@ namespace Custosh
         [[nodiscard]] T dot(const Vector<T, Size>& other) const
         {
             return ((*this).transpose() * other)(0, 0);
+        }
+
+        [[nodiscard]] T normSq() const
+        {
+            T normSq = T();
+
+            for (unsigned int i = 0; i < Size; ++i) {
+                normSq += (*this)(i) * (*this)(i);
+            }
+
+            return normSq;
         }
 
     }; // Vector
@@ -403,13 +413,31 @@ namespace Custosh
             return m_cols;
         }
 
+    protected:
+        std::vector<std::vector<T>> m_matrix;
+        unsigned int m_rows;
+        unsigned int m_cols;
+
+    }; // ResizableMatrix
+
+    class BrightnessMap : public ResizableMatrix<float>
+    {
+    public:
+        BrightnessMap() : ResizableMatrix<float>()
+        {
+        }
+
+        BrightnessMap(unsigned int rows, unsigned int cols) : ResizableMatrix<float>(rows, cols)
+        {
+        }
+
         [[nodiscard]] std::string toString() const
         {
             std::ostringstream oss;
 
             for (unsigned int i = 0; i < m_rows; ++i) {
                 for (unsigned int j = 0; j < m_cols; ++j) {
-                    oss << m_matrix.at(i).at(j) << " ";
+                    oss << brightnessToASCII(m_matrix.at(i).at(j));
                 }
                 oss << "\n";
             }
@@ -417,17 +445,80 @@ namespace Custosh
             return oss.str();
         }
 
-        friend std::ostream& operator<<(std::ostream& os, const ResizableMatrix& matrix)
+        friend std::ostream& operator<<(std::ostream& os, const BrightnessMap& bm)
         {
-            return os << matrix.toString();
+            return os << bm.toString();
         }
 
     private:
-        std::vector<std::vector<T>> m_matrix;
-        unsigned int m_rows;
-        unsigned int m_cols;
+        static char brightnessToASCII(float brightness)
+        {
+            unsigned int idx = std::ceil(brightness * static_cast<float>(ASCIIByBrightness.size() - 1));
+            return ASCIIByBrightness.at(idx);
+        }
 
-    }; // ResizableMatrix
+    }; // BrightnessMap
+
+    template<typename T>
+    class Quaternion
+    {
+    public:
+        Quaternion(T real, Vector3<T> imaginaryVec) : m_realPart(real), m_imaginaryVec(std::move(imaginaryVec))
+        {
+        }
+
+        Quaternion(T real, T i, T j, T k) : m_realPart(real), m_imaginaryVec({i, j, k})
+        {
+        }
+
+        [[nodiscard]] T getRealPart() const
+        {
+            return m_realPart;
+        }
+
+        [[nodiscard]] Vector3<T> getImaginaryVec() const
+        {
+            return m_imaginaryVec;
+        }
+
+        Quaternion<T> operator*(const T& scalar) const
+        {
+            return {scalar * m_realPart, Vector3<T>(scalar * m_imaginaryVec)};
+        }
+
+        friend Quaternion<T> operator*(const T& scalar, const Quaternion<T>& quaternion)
+        {
+            return quaternion * scalar;
+        }
+
+        Quaternion<T> operator+(const Quaternion& other) const
+        {
+            return {m_realPart + other.m_realPart, m_imaginaryVec + other.m_imaginaryVec};
+        }
+
+        Quaternion<T> operator*(const Quaternion& other) const
+        {
+            return {m_realPart * other.m_realPart - m_imaginaryVec.dot(other.m_imaginaryVec),
+                    Vector3<float>(m_realPart * other.m_imaginaryVec +
+                                   other.m_realPart * m_imaginaryVec +
+                                   m_imaginaryVec.cross(other.m_imaginaryVec))};
+        }
+
+        [[nodiscard]] Quaternion<T> conjunction() const
+        {
+            return {m_realPart, Vector3<T>(-1 * m_imaginaryVec)};
+        }
+
+        [[nodiscard]] T normSq() const
+        {
+            return m_realPart * m_realPart + m_imaginaryVec.normSq();
+        }
+
+    private:
+        T m_realPart;
+        Vector3<T> m_imaginaryVec;
+
+    }; // Quaternion
 
     struct triangle3D_t
     {
@@ -459,16 +550,51 @@ namespace Custosh
         float gamma;
     };
 
-    struct pixel1_t
+    struct pixel_t
     {
-        bool occupied;
+        bool occupied = false;
         Vector4<float> coords;
     };
 
-    inline std::ostream& operator<<(std::ostream& os, const pixel1_t& pixel)
+    struct lightSource_t
     {
-        if (pixel.occupied) { return os << "@"; }
-        else { return os << " "; }
+        Vector4<float> coords;
+        float maxDistanceSq = 1;
+    };
+
+    // origin and p must have w = 1
+    inline Vector4<float> rotatePoint(const Vector4<float>& origin,
+                                      const Quaternion<float>& rotationQ,
+                                      const Vector4<float>& p,
+                                      bool normalizeQ)
+    {
+        Quaternion<float> normalizedQ = rotationQ;
+
+        if (normalizeQ) { normalizedQ = rotationQ * static_cast<float>(1.f / sqrt(rotationQ.normSq())); }
+
+        Vector3<float> originPVec3 = {p.x() - origin.x(), p.y() - origin.y(), p.z() - origin.z()};
+        Quaternion<float> originPVec3AsQ(0.f, originPVec3);
+        Quaternion<float> originNewVec3AsQ = normalizedQ * originPVec3AsQ * normalizedQ.conjunction();
+        Vector3<float> originNewVec3 = originNewVec3AsQ.getImaginaryVec();
+
+        return {originNewVec3.x() + origin.x(),
+                originNewVec3.y() + origin.y(),
+                originNewVec3.z() + origin.z(),
+                1.f};
+    }
+
+    inline float degreesToRadians(float degrees)
+    {
+        return degrees * (std::numbers::pi_v<float> / 180.f);
+    }
+
+    inline void clearScreen(ResizableMatrix<pixel_t>& screen)
+    {
+        for (unsigned int i = 0; i < screen.getNRows(); ++i) {
+            for (unsigned int j = 0; j < screen.getNCols(); ++j) {
+                screen(i, j).occupied = false;
+            }
+        }
     }
 
 } // Custosh

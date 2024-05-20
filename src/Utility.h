@@ -534,6 +534,13 @@ namespace Custosh
         Vector2<float> p2;
     };
 
+    struct triangleIndices_t
+    {
+        unsigned int p0;
+        unsigned int p1;
+        unsigned int p2;
+    };
+
     struct boundingBox_t
     {
         int xMax;
@@ -562,39 +569,9 @@ namespace Custosh
         float maxDistanceSq = 1;
     };
 
-    // origin and p must have w = 1
-    inline Vector4<float> rotatePoint(const Vector4<float>& origin,
-                                      const Quaternion<float>& rotationQ,
-                                      const Vector4<float>& p,
-                                      bool normalizeQ)
-    {
-        Quaternion<float> normalizedQ = rotationQ;
-
-        if (normalizeQ) { normalizedQ = rotationQ * static_cast<float>(1.f / sqrt(rotationQ.normSq())); }
-
-        Vector3<float> originPVec3 = {p.x() - origin.x(), p.y() - origin.y(), p.z() - origin.z()};
-        Quaternion<float> originPVec3AsQ(0.f, originPVec3);
-        Quaternion<float> originNewVec3AsQ = normalizedQ * originPVec3AsQ * normalizedQ.conjunction();
-        Vector3<float> originNewVec3 = originNewVec3AsQ.getImaginaryVec();
-
-        return {originNewVec3.x() + origin.x(),
-                originNewVec3.y() + origin.y(),
-                originNewVec3.z() + origin.z(),
-                1.f};
-    }
-
     inline float degreesToRadians(float degrees)
     {
         return degrees * (std::numbers::pi_v<float> / 180.f);
-    }
-
-    inline void clearScreen(ResizableMatrix<pixel_t>& screen)
-    {
-        for (unsigned int i = 0; i < screen.getNRows(); ++i) {
-            for (unsigned int j = 0; j < screen.getNCols(); ++j) {
-                screen(i, j).occupied = false;
-            }
-        }
     }
 
 } // Custosh

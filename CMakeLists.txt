@@ -13,4 +13,5 @@ add_executable(Custosh
         src/Utility.h
         src/CustoshExcept.h
         src/Utility.cpp
+        src/Model.h
 )

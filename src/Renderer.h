@@ -3,9 +3,16 @@
 
 
 #include "Utility.h"
+#include "Model.h"
 
 namespace Custosh::Renderer
 {
+    void clearScreen(ResizableMatrix<pixel_t>& screen);
+
+    void rasterizeModel(const Model& model,
+                        ResizableMatrix<pixel_t>& screen,
+                        const PerspectiveMatrix& pm);
+
     // triangle3D vertices must have w = 1
     void rasterizeTriangle(const triangle3D_t& triangle3D,
                            ResizableMatrix<pixel_t>& screen,

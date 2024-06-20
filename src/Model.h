@@ -13,7 +13,7 @@ namespace Custosh
     class Model
     {
     public:
-        Model(std::vector<Vector4<float>> vertices, std::vector<triangleIndices_t> triangles)
+        Model(std::vector<Vector3<float>> vertices, std::vector<triangleIndices_t> triangles)
                 : m_vertices(std::move(vertices)),
                   m_triangles(std::move(triangles))
         {
@@ -33,8 +33,7 @@ namespace Custosh
             return result;
         }
 
-        // origin and p must have w = 1
-        void rotate(const Vector4<float>& origin,
+        void rotate(const Vector3<float>& origin,
                     const Quaternion<float>& rotationQ,
                     bool normalizeQ)
         {
@@ -48,23 +47,19 @@ namespace Custosh
         }
 
     private:
-        std::vector<Vector4<float>> m_vertices;
+        std::vector<Vector3<float>> m_vertices;
         std::vector<triangleIndices_t> m_triangles;
 
-        static Vector4<float> rotatePoint(const Vector4<float>& origin,
+        static Vector3<float> rotatePoint(const Vector3<float>& origin,
                                           const Quaternion<float>& normalizedRotationQ,
-                                          const Vector4<float>& p)
+                                          const Vector3<float>& p)
         {
             Vector3<float> originPVec3 = {p.x() - origin.x(), p.y() - origin.y(), p.z() - origin.z()};
             Quaternion<float> originPVec3AsQ(0.f, originPVec3);
             Quaternion<float> originNewVec3AsQ =
                     normalizedRotationQ * originPVec3AsQ * normalizedRotationQ.conjunction();
-            Vector3<float> originNewVec3 = originNewVec3AsQ.getImaginaryVec();
 
-            return {originNewVec3.x() + origin.x(),
-                    originNewVec3.y() + origin.y(),
-                    originNewVec3.z() + origin.z(),
-                    1.f};
+            return Vector3<float>(originNewVec3AsQ.getImaginaryVec() + origin);
         }
 
     }; // Model

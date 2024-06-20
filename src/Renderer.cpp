@@ -70,10 +70,10 @@ namespace Custosh::Renderer
             return (w0 >= 0.f && w1 >= 0.f && w2 >= 0.f);
         }
 
-        Vector2<float> applyPerspectivePoint(const Vector4<float>& p,
+        Vector2<float> applyPerspectivePoint(const Vector3<float>& p,
                                              const PerspectiveMatrix& pm)
         {
-            Vector4<float> pPerspective = Vector4(pm * p).normalizeW();
+            Vector4<float> pPerspective = Vector4(pm * p.toHomogeneous()).normalizeW();
             return {pPerspective.x(), pPerspective.y()};
         }
 
@@ -85,28 +85,26 @@ namespace Custosh::Renderer
                     .p2 = applyPerspectivePoint(triangle3D.p2, pm)};
         }
 
-        Vector4<float> getCartesianCoords(const triangle3D_t& triangle3D, const barycentricCoords_t& bc, bool swap)
+        Vector3<float> getCartesianCoords(const triangle3D_t& triangle3D, const barycentricCoords_t& bc, bool swap)
         {
             if (!swap) {
                 return {triangle3D.p0.x() * bc.alpha + triangle3D.p1.x() * bc.beta + triangle3D.p2.x() * bc.gamma,
                         triangle3D.p0.y() * bc.alpha + triangle3D.p1.y() * bc.beta + triangle3D.p2.y() * bc.gamma,
-                        triangle3D.p0.z() * bc.alpha + triangle3D.p1.z() * bc.beta + triangle3D.p2.z() * bc.gamma,
-                        1.f};
+                        triangle3D.p0.z() * bc.alpha + triangle3D.p1.z() * bc.beta + triangle3D.p2.z() * bc.gamma};
             }
             else {
                 return {triangle3D.p1.x() * bc.alpha + triangle3D.p0.x() * bc.beta + triangle3D.p2.x() * bc.gamma,
                         triangle3D.p1.y() * bc.alpha + triangle3D.p0.y() * bc.beta + triangle3D.p2.y() * bc.gamma,
-                        triangle3D.p1.z() * bc.alpha + triangle3D.p0.z() * bc.beta + triangle3D.p2.z() * bc.gamma,
-                        1.f};
+                        triangle3D.p1.z() * bc.alpha + triangle3D.p0.z() * bc.beta + triangle3D.p2.z() * bc.gamma};
             }
         }
 
-        float distanceSq(const Vector4<float>& a, const Vector4<float>& b)
+        float distanceSq(const Vector3<float>& a, const Vector3<float>& b)
         {
             return static_cast<float>(pow((a.x() - b.x()), 2) + pow((a.y() - b.y()), 2) + pow((a.z() - b.z()), 2));
         }
 
-        float getPointBrightness(const Vector4<float>& p, const lightSource_t& ls)
+        float getPointBrightness(const Vector3<float>& p, const lightSource_t& ls)
         {
             float distSq = distanceSq(p, ls.coords);
             float brightness = 1 - distSq / ls.maxDistanceSq;
@@ -139,17 +137,17 @@ namespace Custosh::Renderer
                            const PerspectiveMatrix& pm)
     {
         triangle2D_t triangle2D = applyPerspectiveTriangle(triangle3D, pm);
-        float triangleAreaTimesTwo = cross2D(triangle2D.p0, triangle2D.p1, triangle2D.p2);
+        float triangleArea2x = cross2D(triangle2D.p0, triangle2D.p1, triangle2D.p2);
         barycentricCoords_t bc{};
         bool swap = false;
 
-        if (triangleAreaTimesTwo < 0.f) {
+        if (triangleArea2x < 0.f) {
             std::swap(triangle2D.p0, triangle2D.p1);
-            triangleAreaTimesTwo *= -1;
+            triangleArea2x *= -1;
             swap = true;
         }
 
-        if (screen.getNRows() == 0 || screen.getNCols() == 0 || triangleAreaTimesTwo == 0.f) {
+        if (screen.getNRows() == 0 || screen.getNCols() == 0 || triangleArea2x == 0.f) {
             return;
         }
 
@@ -160,9 +158,9 @@ namespace Custosh::Renderer
 
                 if (inTriangle(triangle2D,
                                Vector2<float>({static_cast<float>(j), static_cast<float>(i)}),
-                               triangleAreaTimesTwo,
+                               triangleArea2x,
                                bc)) {
-                    Vector4<float> projectedPoint = getCartesianCoords(triangle3D, bc, swap);
+                    Vector3<float> projectedPoint = getCartesianCoords(triangle3D, bc, swap);
                     pixel_t& screenPoint = screen(i, j);
 
                     if (!screenPoint.occupied || screenPoint.coords.z() > projectedPoint.z()) {

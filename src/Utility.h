@@ -232,69 +232,6 @@ namespace Custosh
     }; // Vector2
 
     template<typename T>
-    class Vector3 : public Vector<T, 3>
-    {
-    public:
-        Vector3() : Vector<T, 3>()
-        {
-        }
-
-        explicit Vector3(Vector<T, 3> vector) : Vector<T, 3>(vector)
-        {
-        }
-
-        explicit Vector3(Matrix<T, 3, 1> matrix) : Vector<T, 3>(matrix)
-        {
-        }
-
-        Vector3(const std::initializer_list<T>& init) : Vector<T, 3>(init)
-        {
-        }
-
-        T& x()
-        {
-            return (*this)(0);
-        }
-
-        [[nodiscard]] const T& x() const
-        {
-            return (*this)(0);
-        }
-
-        T& y()
-        {
-            return (*this)(1);
-        }
-
-        [[nodiscard]] const T& y() const
-        {
-            return (*this)(1);
-        }
-
-        T& z()
-        {
-            return (*this)(2);
-        }
-
-        [[nodiscard]] const T& z() const
-        {
-            return (*this)(2);
-        }
-
-        [[nodiscard]] Vector3<T> cross(const Vector3<T>& other) const
-        {
-            Vector3<T> result;
-
-            result(0) = (*this)(1) * other(2) - (*this)(2) * other(1);
-            result(1) = (*this)(2) * other(0) - (*this)(0) * other(2);
-            result(2) = (*this)(0) * other(1) - (*this)(1) * other(0);
-
-            return result;
-        }
-
-    }; // Vector3
-
-    template<typename T>
     class Vector4 : public Vector<T, 4>
     {
     public:
@@ -367,6 +304,74 @@ namespace Custosh
         }
 
     }; // Vector4
+
+    template<typename T>
+    class Vector3 : public Vector<T, 3>
+    {
+    public:
+        Vector3() : Vector<T, 3>()
+        {
+        }
+
+        explicit Vector3(Vector<T, 3> vector) : Vector<T, 3>(vector)
+        {
+        }
+
+        explicit Vector3(Matrix<T, 3, 1> matrix) : Vector<T, 3>(matrix)
+        {
+        }
+
+        Vector3(const std::initializer_list<T>& init) : Vector<T, 3>(init)
+        {
+        }
+
+        T& x()
+        {
+            return (*this)(0);
+        }
+
+        [[nodiscard]] const T& x() const
+        {
+            return (*this)(0);
+        }
+
+        T& y()
+        {
+            return (*this)(1);
+        }
+
+        [[nodiscard]] const T& y() const
+        {
+            return (*this)(1);
+        }
+
+        T& z()
+        {
+            return (*this)(2);
+        }
+
+        [[nodiscard]] const T& z() const
+        {
+            return (*this)(2);
+        }
+
+        [[nodiscard]] Vector3<T> cross(const Vector3<T>& other) const
+        {
+            Vector3<T> result;
+
+            result(0) = (*this)(1) * other(2) - (*this)(2) * other(1);
+            result(1) = (*this)(2) * other(0) - (*this)(0) * other(2);
+            result(2) = (*this)(0) * other(1) - (*this)(1) * other(0);
+
+            return result;
+        }
+
+        [[nodiscard]] Vector4<T> toHomogeneous() const
+        {
+            return {x(), y(), z(), 1};
+        }
+
+    }; // Vector3
 
     template<typename T>
     class ResizableMatrix
@@ -522,9 +527,9 @@ namespace Custosh
 
     struct triangle3D_t
     {
-        Vector4<float> p0;
-        Vector4<float> p1;
-        Vector4<float> p2;
+        Vector3<float> p0;
+        Vector3<float> p1;
+        Vector3<float> p2;
     };
 
     struct triangle2D_t
@@ -560,12 +565,12 @@ namespace Custosh
     struct pixel_t
     {
         bool occupied = false;
-        Vector4<float> coords;
+        Vector3<float> coords;
     };
 
     struct lightSource_t
     {
-        Vector4<float> coords;
+        Vector3<float> coords;
         float maxDistanceSq = 1;
     };
 

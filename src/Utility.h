@@ -91,6 +91,11 @@ namespace Custosh
             return result;
         }
 
+        Matrix<T, Rows, Cols> operator-(const Matrix<T, Rows, Cols>& other) const
+        {
+            return *this + -1 * other;
+        }
+
         template<unsigned int OtherCols>
         Matrix<T, Rows, OtherCols> operator*(const Matrix<T, Cols, OtherCols>& other) const
         {
@@ -185,6 +190,15 @@ namespace Custosh
             }
 
             return normSq;
+        }
+
+        [[nodiscard]] Vector<T, Size> normalized() const
+        {
+            T normSquared = normSq();
+
+            if (normSquared == 0) { return *this; }
+
+            return Vector<T, Size>(*this * (1.0f / std::sqrt(normSquared)));
         }
 
     }; // Vector
@@ -566,6 +580,7 @@ namespace Custosh
     {
         bool occupied = false;
         Vector3<float> coords;
+        Vector3<float> normal;
     };
 
     struct lightSource_t

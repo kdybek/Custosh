@@ -13,7 +13,7 @@ namespace Custosh::Renderer
                         ResizableMatrix<pixel_t>& screen,
                         const PerspectiveMatrix& pm);
 
-    void rasterizeTriangle(const triangle3D_t& triangle3D,
+    void rasterizeTriangle(triangle3D_t triangle3D,
                            ResizableMatrix<pixel_t>& screen,
                            const PerspectiveMatrix& pm);
 

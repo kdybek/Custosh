@@ -52,7 +52,7 @@ namespace Custosh::Renderer
 
         bool inTriangle(const triangle2D_t& triangle2D,
                         const Vector2<float>& p,
-                        float triangleAreaTimeTwo,
+                        float triangleArea2x,
                         barycentricCoords_t& barycentricCoords)
         {
             float w0 = cross2D(triangle2D.p1, p, triangle2D.p2);
@@ -63,9 +63,9 @@ namespace Custosh::Renderer
             if (w1 == 0 && isBottomOrRight(triangle2D.p2, triangle2D.p0)) { return false; }
             if (w2 == 0 && isBottomOrRight(triangle2D.p0, triangle2D.p1)) { return false; }
 
-            barycentricCoords.alpha = w0 / triangleAreaTimeTwo;
-            barycentricCoords.beta = w1 / triangleAreaTimeTwo;
-            barycentricCoords.gamma = w2 / triangleAreaTimeTwo;
+            barycentricCoords.alpha = w0 / triangleArea2x;
+            barycentricCoords.beta = w1 / triangleArea2x;
+            barycentricCoords.gamma = w2 / triangleArea2x;
 
             return (w0 >= 0.f && w1 >= 0.f && w2 >= 0.f);
         }
@@ -73,7 +73,7 @@ namespace Custosh::Renderer
         Vector2<float> applyPerspectivePoint(const Vector3<float>& p,
                                              const PPM& ppm)
         {
-            Vector4<float> pPerspective = Vector4(ppm * p.toHomogeneous()).normalizeW();
+            Vector4<float> pPerspective = Vector4<float>(ppm * p.toHomogeneous()).normalizeW();
             return {pPerspective.x(), pPerspective.y()};
         }
 
@@ -110,15 +110,15 @@ namespace Custosh::Renderer
         float getPointBrightness(const pixel_t& p, const lightSource_t& ls)
         {
             float distSq = distanceSq(p.coords, ls.coords);
-            float brightness = 1 - distSq / ls.maxDistanceSq;
-            if (brightness > 0) {
+            float brightness = 1.f - distSq / ls.maxDistanceSq;
+            if (brightness > 0.f) {
                 float cos = cosine3D(p.coords,
                                      Vector3<float>(p.coords + p.normal),
                                      ls.coords);
 
-                return brightness * 0.5f * (cos + 1);
+                return brightness * 0.5f * (cos + 1.f);
             }
-            else { return 0; }
+            else { return 0.f; }
         }
 
         // The vertices are clockwise oriented, but we're looking from 0 towards positive z values.

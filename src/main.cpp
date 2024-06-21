@@ -10,15 +10,15 @@
 int main()
 {
     std::vector<Custosh::Vector3<float>> cubeVer;
-    cubeVer.push_back({-0.5, -0.5, -0.5});
-    cubeVer.push_back({0.5, -0.5, -0.5});
-    cubeVer.push_back({-0.5, 0.5, -0.5});
-    cubeVer.push_back({0.5, -0.5, -0.5});
+    cubeVer.push_back({-0.5, -0.5, 1.5});
+    cubeVer.push_back({0.5, -0.5, 1.5});
+    cubeVer.push_back({-0.5, 0.5, 1.5});
+    cubeVer.push_back({0.5, 0.5, 1.5});
 
-    cubeVer.push_back({-0.5, -0.5, 0.5});
-    cubeVer.push_back({0.5, -0.5, 0.5});
-    cubeVer.push_back({-0.5, 0.5, 0.5});
-    cubeVer.push_back({0.5, 0.5, 0.5});
+    cubeVer.push_back({-0.5, -0.5, 2.5});
+    cubeVer.push_back({0.5, -0.5, 2.5});
+    cubeVer.push_back({-0.5, 0.5, 2.5});
+    cubeVer.push_back({0.5, 0.5, 2.5});
 
     std::vector<Custosh::triangleIndices_t> cubeInd;
     cubeInd.emplace_back(0, 2, 3);
@@ -39,14 +39,15 @@ int main()
     Custosh::Model cube(cubeVer, cubeInd);
 
     Custosh::ResizableMatrix<Custosh::pixel_t> screen(100, 100);
-    Custosh::OrtProjMatrix opm({-1, -1, -1},
-                               {1, 1, 1},
-                               {0, 0, -100},
-                               {100, 100, 100});
+    Custosh::OrtProjMatrix opm({-1, -1, 1},
+                               {1, 1, 10},
+                               {0, 0, 0},
+                               {100, 100, 0});
 
-    Custosh::PerspectiveMatrix pm(-1, 1);
+    Custosh::PerspectiveMatrix pm(1, 10);
     Custosh::PPM ppm(pm, opm);
-    Custosh::lightSource_t ls = {.coords = {-1, 1, -1}, .maxDistanceSq = 8000};
+
+    Custosh::lightSource_t ls = {.coords = {-5, 5, 2}, .maxDistanceSq = 70};
 
     float rotationAngle1 = Custosh::degreesToRadians(10);
 
@@ -61,8 +62,12 @@ int main()
     Custosh::Vector3<float> rotationVec3 = {0, 0, 1};
 
     while (true) {
-        cube.rotate({40, 50, 130}, {std::cos(rotationAngle1 / 2),
+        cube.rotate({0, 0, 2}, {std::cos(rotationAngle1 / 2),
                                        Custosh::Vector3<float>(std::sin(rotationAngle1 / 2) * rotationVec1)}, false);
+        cube.rotate({0, 0, 2}, {std::cos(rotationAngle2 / 2),
+                                Custosh::Vector3<float>(std::sin(rotationAngle2 / 2) * rotationVec2)}, false);
+        cube.rotate({0, 0, 2}, {std::cos(rotationAngle3 / 2),
+                                Custosh::Vector3<float>(std::sin(rotationAngle3 / 2) * rotationVec3)}, false);
 
         Custosh::Renderer::rasterizeModel(cube, screen, ppm);
         Custosh::BrightnessMap bMap = Custosh::Renderer::getBrightnessMap(screen, ls);
@@ -70,6 +75,6 @@ int main()
         system("cls");
         std::cout << bMap;
         Custosh::Renderer::clearScreen(screen);
-        std::this_thread::sleep_for(std::chrono::milliseconds(12));
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
 }

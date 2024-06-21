@@ -71,18 +71,18 @@ namespace Custosh::Renderer
         }
 
         Vector2<float> applyPerspectivePoint(const Vector3<float>& p,
-                                             const PerspectiveMatrix& pm)
+                                             const PPM& ppm)
         {
-            Vector4<float> pPerspective = Vector4(pm * p.toHomogeneous()).normalizeW();
+            Vector4<float> pPerspective = Vector4(ppm * p.toHomogeneous()).normalizeW();
             return {pPerspective.x(), pPerspective.y()};
         }
 
         triangle2D_t applyPerspectiveTriangle(const triangle3D_t& triangle3D,
-                                              const PerspectiveMatrix& pm)
+                                              const PPM& ppm)
         {
-            return {.p0 = applyPerspectivePoint(triangle3D.p0, pm),
-                    .p1 = applyPerspectivePoint(triangle3D.p1, pm),
-                    .p2 = applyPerspectivePoint(triangle3D.p2, pm)};
+            return {.p0 = applyPerspectivePoint(triangle3D.p0, ppm),
+                    .p1 = applyPerspectivePoint(triangle3D.p1, ppm),
+                    .p2 = applyPerspectivePoint(triangle3D.p2, ppm)};
         }
 
         Vector3<float> getCartesianCoords(const triangle3D_t& triangle3D, const barycentricCoords_t& bc)
@@ -143,18 +143,18 @@ namespace Custosh::Renderer
 
     void rasterizeModel(const Model& model,
                         ResizableMatrix<pixel_t>& screen,
-                        const PerspectiveMatrix& pm)
+                        const PPM& ppm)
     {
         for (const auto& triangle: model.getTriangles()) {
-            rasterizeTriangle(triangle, screen, pm);
+            rasterizeTriangle(triangle, screen, ppm);
         }
     }
 
     void rasterizeTriangle(triangle3D_t triangle3D,
                            ResizableMatrix<pixel_t>& screen,
-                           const PerspectiveMatrix& pm)
+                           const PPM& ppm)
     {
-        triangle2D_t triangle2D = applyPerspectiveTriangle(triangle3D, pm);
+        triangle2D_t triangle2D = applyPerspectiveTriangle(triangle3D, ppm);
         float triangleArea2x = cross2D(triangle2D.p0, triangle2D.p2, triangle2D.p1);
         barycentricCoords_t bc{};
 

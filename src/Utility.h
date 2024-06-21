@@ -131,20 +131,6 @@ namespace Custosh
 
     }; // Matrix
 
-    class PerspectiveMatrix : public Matrix<float, 4, 4>
-    {
-    public:
-        explicit PerspectiveMatrix(float nearPlaneDist, float farPlaneDist) : Matrix<float, 4, 4>()
-        {
-            (*this)(0, 0) = nearPlaneDist;
-            (*this)(1, 1) = nearPlaneDist;
-            (*this)(2, 2) = nearPlaneDist + farPlaneDist;
-            (*this)(2, 3) = -nearPlaneDist * farPlaneDist;
-            (*this)(3, 2) = 1.f;
-        }
-
-    }; // PerspectiveMatrix
-
     template<typename T, unsigned int Size>
     class Vector : public Matrix<T, Size, 1>
     {
@@ -387,6 +373,83 @@ namespace Custosh
 
     }; // Vector3
 
+    class PerspectiveMatrix : public Matrix<float, 4, 4>
+    {
+    public:
+        explicit PerspectiveMatrix(float nearPlaneDist, float farPlaneDist) : Matrix<float, 4, 4>()
+        {
+            (*this)(0, 0) = nearPlaneDist;
+            (*this)(1, 1) = nearPlaneDist;
+            (*this)(2, 2) = nearPlaneDist + farPlaneDist;
+            (*this)(2, 3) = -nearPlaneDist * farPlaneDist;
+            (*this)(3, 2) = 1.f;
+        }
+
+    }; // PerspectiveMatrix
+
+    class OrtProjMatrix : public Matrix<float, 4, 4>
+    {
+    public:
+        explicit OrtProjMatrix(const Vector3<float>& fromMinCorner,
+                               const Vector3<float>& fromMaxCorner,
+                               const Vector3<float>& toMinCorner,
+                               const Vector3<float>& toMaxCorner) : Matrix<float, 4, 4>(init(fromMinCorner,
+                                                                                             fromMaxCorner,
+                                                                                             toMinCorner,
+                                                                                             toMaxCorner))
+        {
+        }
+
+    private:
+        static Matrix<float, 4, 4> init(const Vector3<float>& fromMinCorner,
+                                        const Vector3<float>& fromMaxCorner,
+                                        const Vector3<float>& toMinCorner,
+                                        const Vector3<float>& toMaxCorner)
+        {
+            auto centerTranslationVec = Vector3<float>(boxCenter(fromMinCorner, fromMaxCorner) * -1);
+            Matrix<float, 4, 4> centerTranslationMatrix = {{1.f, 0.f, 0.f, centerTranslationVec.x()},
+                                                           {0.f, 1.f, 0.f, centerTranslationVec.y()},
+                                                           {0.f, 0.f, 1.f, centerTranslationVec.z()},
+                                                           {0.f, 0.f, 0.f, 1.f}};
+
+            Vector3<float> toTranslationVec = boxCenter(toMinCorner, toMaxCorner);
+            Matrix<float, 4, 4> toTranslationMatrix = {{1.f, 0.f, 0.f, toTranslationVec.x()},
+                                                     {0.f, 1.f, 0.f, toTranslationVec.y()},
+                                                     {0.f, 0.f, 1.f, toTranslationVec.z()},
+                                                     {0.f, 0.f, 0.f, 1.f}};
+
+            auto scalingVecAuxTo = Vector3<float>(toMaxCorner - toMinCorner);
+            auto scalingVecAuxFrom = Vector3<float>(fromMaxCorner - fromMinCorner);
+
+            Vector3<float> scalingVecAux = {scalingVecAuxTo.x() / scalingVecAuxFrom.x(),
+                                            scalingVecAuxTo.y() / scalingVecAuxFrom.y(),
+                                            scalingVecAuxTo.z() / scalingVecAuxFrom.z()};
+
+            Matrix<float, 4, 4> scalingMatrix = {{scalingVecAux.x(), 0.f,               0.f,               0.f},
+                                                 {0.f,               scalingVecAux.y(), 0.f,               0.f},
+                                                 {0.f,               0.f,               scalingVecAux.z(), 0.f},
+                                                 {0.f,               0.f,               0.f,               1.f}};
+
+            return toTranslationMatrix * scalingMatrix * centerTranslationMatrix;
+        }
+
+        static Vector3<float> boxCenter(const Vector3<float>& minCorner,
+                                        const Vector3<float>& maxCorner)
+        {
+            return Vector3<float>((minCorner + maxCorner) * 0.5f);
+        }
+
+    }; // OrtProjMatrix
+
+    class PPM : public Matrix<float, 4, 4>
+    {
+    public:
+        explicit PPM(const PerspectiveMatrix& pm, const OrtProjMatrix& opm) : Matrix<float, 4, 4>(opm * pm)
+        {
+        }
+
+    }; // PPM
+
     template<typename T>
     class ResizableMatrix
     {
@@ -398,28 +461,25 @@ namespace Custosh
         ResizableMatrix(unsigned int rows, unsigned int cols)
                 : m_rows(rows),
                   m_cols(cols),
-                  m_matrix(rows, std::vector<T>(cols))
+                  m_matrix(rows * cols)
         {
         }
 
         void resize(unsigned int newRows, unsigned int newCols)
         {
-            m_matrix.resize(newRows);
-            for (auto& row: m_matrix) {
-                row.resize(newCols);
-            }
+            m_matrix.resize(newRows * newCols);
             m_rows = newRows;
             m_cols = newCols;
         }
 
         T& operator()(unsigned int row, unsigned int col)
         {
-            return m_matrix.at(row).at(col);
+            return m_matrix.at(m_cols * row + col);
         }
 
         const T& operator()(unsigned int row, unsigned int col) const
         {
-            return m_matrix.at(row).at(col);
+            return m_matrix.at(m_cols * row + col);
         }
 
         [[nodiscard]] unsigned int getNRows() const
@@ -433,7 +493,7 @@ namespace Custosh
         }
 
     protected:
-        std::vector<std::vector<T>> m_matrix;
+        std::vector<T> m_matrix;
         unsigned int m_rows;
         unsigned int m_cols;
 
@@ -454,9 +514,9 @@ namespace Custosh
         {
             std::ostringstream oss;
 
-            for (unsigned int i = 0; i < m_rows; ++i) {
-                for (unsigned int j = 0; j < m_cols; ++j) {
-                    oss << brightnessToASCII(m_matrix.at(i).at(j));
+            for (unsigned int i = getNRows(); i > 0; --i) {
+                for (unsigned int j = 0; j < getNCols(); ++j) {
+                    oss << brightnessToASCII((*this)(i - 1, j));
                 }
                 oss << "\n";
             }
@@ -566,7 +626,6 @@ namespace Custosh
         int xMin;
         int yMax;
         int yMin;
-
     };
 
     struct barycentricCoords_t

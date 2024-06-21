@@ -11,11 +11,11 @@ namespace Custosh::Renderer
 
     void rasterizeModel(const Model& model,
                         ResizableMatrix<pixel_t>& screen,
-                        const PerspectiveMatrix& pm);
+                        const PPM& ppm);
 
     void rasterizeTriangle(triangle3D_t triangle3D,
                            ResizableMatrix<pixel_t>& screen,
-                           const PerspectiveMatrix& pm);
+                           const PPM& ppm);
 
     BrightnessMap getBrightnessMap(const ResizableMatrix<pixel_t>& screen,
                                    const lightSource_t& ls);

@@ -510,32 +510,6 @@ namespace Custosh
         {
         }
 
-        [[nodiscard]] std::string toString() const
-        {
-            std::ostringstream oss;
-
-            for (unsigned int i = getNRows(); i > 0; --i) {
-                for (unsigned int j = 0; j < getNCols(); ++j) {
-                    oss << brightnessToASCII((*this)(i - 1, j));
-                }
-                oss << "\n";
-            }
-
-            return oss.str();
-        }
-
-        friend std::ostream& operator<<(std::ostream& os, const BrightnessMap& bm)
-        {
-            return os << bm.toString();
-        }
-
-    private:
-        static char brightnessToASCII(float brightness)
-        {
-            unsigned int idx = std::ceil(brightness * static_cast<float>(ASCIIByBrightness.size() - 1));
-            return ASCIIByBrightness.at(idx);
-        }
-
     }; // BrightnessMap
 
     template<typename T>

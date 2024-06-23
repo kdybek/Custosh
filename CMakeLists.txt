@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 include_directories(.)
 
 add_executable(Custosh
-        src/main.cpp
+        src/Main.cpp
         src/Utility.h
         src/Renderer.h
         src/Renderer.cpp
@@ -14,4 +14,5 @@ add_executable(Custosh
         src/CustoshExcept.h
         src/Utility.cpp
         src/Model.h
+        src/WindowsConsoleScreenBuffer.h
 )

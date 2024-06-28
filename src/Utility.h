@@ -414,9 +414,9 @@ namespace Custosh
 
             Vector3<float> toTranslationVec = boxCenter(toMinCorner, toMaxCorner);
             Matrix<float, 4, 4> toTranslationMatrix = {{1.f, 0.f, 0.f, toTranslationVec.x()},
-                                                     {0.f, 1.f, 0.f, toTranslationVec.y()},
-                                                     {0.f, 0.f, 1.f, toTranslationVec.z()},
-                                                     {0.f, 0.f, 0.f, 1.f}};
+                                                       {0.f, 1.f, 0.f, toTranslationVec.y()},
+                                                       {0.f, 0.f, 1.f, toTranslationVec.z()},
+                                                       {0.f, 0.f, 0.f, 1.f}};
 
             auto scalingVecAuxTo = Vector3<float>(toMaxCorner - toMinCorner);
             auto scalingVecAuxFrom = Vector3<float>(fromMaxCorner - fromMinCorner);
@@ -508,6 +508,24 @@ namespace Custosh
 
         BrightnessMap(unsigned int rows, unsigned int cols) : ResizableMatrix<float>(rows, cols)
         {
+        }
+
+        [[nodiscard]] std::string rowToString(unsigned int row) const
+        {
+            std::string buffer;
+
+            for (unsigned int j = 0; j < m_cols; ++j) {
+                buffer += brightnessToASCII((*this)(row, j));
+            }
+
+            return buffer;
+        }
+
+    private:
+        static char brightnessToASCII(float brightness)
+        {
+            unsigned int idx = std::ceil(brightness * static_cast<float>(ASCIIByBrightness.size() - 1));
+            return ASCIIByBrightness.at(idx);
         }
 
     }; // BrightnessMap

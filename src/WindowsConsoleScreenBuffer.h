@@ -1,5 +1,5 @@
-#ifndef SNEK_WINDOWSCONSOLESCREENBUFFER_H
-#define SNEK_WINDOWSCONSOLESCREENBUFFER_H
+#ifndef CUSTOSH_WINDOWSCONSOLESCREENBUFFER_H
+#define CUSTOSH_WINDOWSCONSOLESCREENBUFFER_H
 
 
 #include <windows.h>
@@ -38,13 +38,11 @@ namespace Custosh
         void draw(const BrightnessMap& bm)
         {
             for (unsigned int i = 0; i < bm.getNRows(); ++i) {
-                for (unsigned int j = 0; j < bm.getNCols(); ++j) {
-                    CHAR c = brightnessToASCII(bm(i, j));
-                    DWORD charsWritten;
-                    WriteConsoleOutputCharacter(m_handle, &c, 1,
-                                                {static_cast<SHORT>(bm.getNRows() - i - 1), static_cast<SHORT>(j)},
-                                                &charsWritten);
-                }
+                std::string terminalOutput = bm.rowToString(i);
+
+                DWORD charsWritten;
+                COORD coord = {0, static_cast<SHORT>(bm.getNRows() - i - 1)};
+                WriteConsoleOutputCharacter(m_handle, terminalOutput.c_str(), terminalOutput.size(), coord, &charsWritten);
             }
         }
 
@@ -56,14 +54,9 @@ namespace Custosh
     private:
         HANDLE m_handle;
 
-        static char brightnessToASCII(float brightness)
-        {
-            unsigned int idx = std::ceil(brightness * static_cast<float>(ASCIIByBrightness.size() - 1));
-            return ASCIIByBrightness.at(idx);
-        }
     };
 
 }
 
 
-#endif // SNEK_WINDOWSCONSOLESCREENBUFFER_H
+#endif // CUSTOSH_WINDOWSCONSOLESCREENBUFFER_H

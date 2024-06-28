@@ -2,6 +2,7 @@
 #include <cmath>
 #include <chrono>
 #include <thread>
+#include <algorithm>
 
 #include "Utility.h"
 #include "Renderer.h"
@@ -41,22 +42,22 @@ int main()
 
     Model cube(cubeVer, cubeInd);
 
-    ResizableMatrix<pixel_t> screen(70, 70);
+    ResizableMatrix<pixel_t> screen(100, 100);
     OrtProjMatrix opm({-1, -1, 1},
                       {1, 1, 10},
                       {0, 0, 0},
-                      {70, 70, 0});
+                      {100, 100, 0});
 
     PerspectiveMatrix pm(1, 10);
     PPM ppm(pm, opm);
 
-    lightSource_t ls = {.coords = {-1, 1, 0}};
+    lightSource_t ls = {.coords = {0, 0, 0}};
 
-    float rotationAngle1 = degreesToRadians(5);
+    float rotationAngle1 = degreesToRadians(3);
 
     float rotationAngle2 = degreesToRadians(2);
 
-    float rotationAngle3 = degreesToRadians(3);
+    float rotationAngle3 = degreesToRadians(1);
 
     Vector3<float> rotationVec1 = {0, 1, 0};
 
@@ -68,6 +69,8 @@ int main()
     WindowsConsoleScreenBuffer buf2;
 
     while (true) {
+        auto start = std::chrono::high_resolution_clock::now();
+
         cube.rotate({0, 0, 2}, rotationAngle1, rotationVec1);
         cube.rotate({0, 0, 2}, rotationAngle2, rotationVec2);
         cube.rotate({0, 0, 2}, rotationAngle3, rotationVec3);
@@ -79,7 +82,13 @@ int main()
         buf1.activate();
         Renderer::clearScreen(screen);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        auto end = std::chrono::high_resolution_clock::now();
+
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long)0, 30 - elapsed.count())));
+
+        start = std::chrono::high_resolution_clock::now();
 
         cube.rotate({0, 0, 2}, rotationAngle1, rotationVec1);
         cube.rotate({0, 0, 2}, rotationAngle2, rotationVec2);
@@ -92,6 +101,10 @@ int main()
         buf2.activate();
         Renderer::clearScreen(screen);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        end = std::chrono::high_resolution_clock::now();
+
+        elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long)0, 30 - elapsed.count())));
     }
 }

@@ -2,6 +2,7 @@
 #define CUSTOSH_WINDOWSCONSOLESCREENBUFFER_H
 
 
+#define NOMINMAX
 #include <windows.h>
 
 #include "CustoshExcept.h"

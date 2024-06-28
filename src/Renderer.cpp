@@ -1,6 +1,7 @@
 #include "Renderer.h"
 
 #include <cmath>
+#include <algorithm>
 
 namespace Custosh::Renderer
 {
@@ -110,15 +111,9 @@ namespace Custosh::Renderer
         float getPointBrightness(const pixel_t& p, const lightSource_t& ls)
         {
             float distSq = distanceSq(p.coords, ls.coords);
-            float brightness = 1.f - distSq / ls.maxDistanceSq;
-            if (brightness > 0.f) {
-                float cos = cosine3D(p.coords,
-                                     Vector3<float>(p.coords + p.normal),
-                                     ls.coords);
+            float cos = cosine3D(p.coords, Vector3<float>(p.coords + p.normal), ls.coords);
 
-                return brightness * 0.5f * (cos + 1.f);
-            }
-            else { return 0.f; }
+            return std::clamp(std::max(cos, 0.f) * ls.intensity / distSq, 0.f, 1.f);
         }
 
         // The vertices are clockwise oriented, but we're looking from 0 towards positive z values.

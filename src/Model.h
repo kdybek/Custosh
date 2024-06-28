@@ -34,12 +34,13 @@ namespace Custosh
         }
 
         void rotate(const Vector3<float>& origin,
-                    const Quaternion<float>& rotationQ,
-                    bool normalizeQ)
+                    float angle,
+                    const Vector3<float>& rotationVec)
         {
-            Quaternion<float> normalizedQ = rotationQ;
+            Quaternion<float> rotationQ = {std::cos(angle / 2),
+                                           Custosh::Vector3<float>(std::sin(angle / 2) * rotationVec)};
 
-            if (normalizeQ) { normalizedQ = rotationQ * static_cast<float>(1.f / sqrt(rotationQ.normSq())); }
+            Quaternion<float> normalizedQ = rotationQ * static_cast<float>(1.f / sqrt(rotationQ.normSq()));
 
             for (auto& v: m_vertices) {
                 v = rotatePoint(origin, normalizedQ, v);

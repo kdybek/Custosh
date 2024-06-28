@@ -637,7 +637,7 @@ namespace Custosh
     struct lightSource_t
     {
         Vector3<float> coords;
-        float maxDistanceSq = 1;
+        float intensity = 1.f; // 0 - 1
     };
 
     inline float degreesToRadians(float degrees)

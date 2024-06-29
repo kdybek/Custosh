@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cmath>
 #include <chrono>
 #include <thread>
 #include <algorithm>
@@ -54,7 +53,7 @@ int main()
     cudaFree(d_b);
     cudaFree(d_res);
 
-    /*std::vector<Vector3<float>> cubeVer;
+    std::vector<Vector3<float>> cubeVer;
     cubeVer.push_back({-0.5, -0.5, 1.5});
     cubeVer.push_back({0.5, -0.5, 1.5});
     cubeVer.push_back({-0.5, 0.5, 1.5});
@@ -83,16 +82,16 @@ int main()
 
     Model cube(cubeVer, cubeInd);
 
-    ResizableMatrix<pixel_t> screen(100, 100);
+    ResizableMatrix<pixel_t> screen(70, 70);
     OrtProjMatrix opm({-1, -1, 1},
                       {1, 1, 10},
                       {0, 0, 0},
-                      {100, 100, 0});
+                      {70, 70, 0});
 
     PerspectiveMatrix pm(1, 10);
-    PPM ppm(pm, opm);
+    PerspectiveProjMatrix ppm(pm, opm);
 
-    lightSource_t ls = {.coords = {0, 0, 0}};
+    lightSource_t ls;
 
     float rotationAngle1 = degreesToRadians(3);
 
@@ -147,5 +146,5 @@ int main()
         elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long)0, 30 - elapsed.count())));
-    }*/
+    }
 }

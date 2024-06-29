@@ -2,9 +2,7 @@
 #define CUSTOSH_UTILITY_CUH
 
 
-#include <array>
 #include <string>
-#include <sstream>
 #include <utility>
 #include <vector>
 #include <cmath>
@@ -13,10 +11,7 @@
 
 namespace Custosh
 {
-    inline const char* h_ASCIIByBrightness =
-            R"( .'`,_^"-+:;!><~?iI[]{}1()|\/tfjrnxuvczXYUJCLQ0OZmwqpdkbhao*#MW&8%B@$)";
-
-    __constant__ inline const char* d_ASCIIByBrightness =
+    inline const std::string ASCIIByBrightness =
             R"( .'`,_^"-+:;!><~?iI[]{}1()|\/tfjrnxuvczXYUJCLQ0OZmwqpdkbhao*#MW&8%B@$)";
 
     template<typename T, unsigned int Rows, unsigned int Cols>
@@ -381,28 +376,71 @@ namespace Custosh
     class PerspectiveMatrix : public Matrix<float, 4, 4>
     {
     public:
-        __host__ __device__ explicit PerspectiveMatrix(float nearPlaneDist, float farPlaneDist) : Matrix<float, 4, 4>()
+        __host__ __device__ PerspectiveMatrix(float nearPlaneDist, float farPlaneDist)
+                : Matrix<float, 4, 4>(init(nearPlaneDist, farPlaneDist))
         {
-            (*this)(0, 0) = nearPlaneDist;
-            (*this)(1, 1) = nearPlaneDist;
-            (*this)(2, 2) = nearPlaneDist + farPlaneDist;
-            (*this)(2, 3) = -nearPlaneDist * farPlaneDist;
-            (*this)(3, 2) = 1.f;
+        }
+
+    private:
+        __host__ __device__ static Matrix<float, 4, 4> init(float nearPlaneDist, float farPlaneDist)
+        {
+            return {{nearPlaneDist, 0.f,           0.f,                          0.f},
+                    {0.f,           nearPlaneDist, 0.f,                          0.f},
+                    {0.f,           0.f,           nearPlaneDist + farPlaneDist, -nearPlaneDist * farPlaneDist},
+                    {0.f,           0.f,           1.f,                          0.f}};
         }
 
     }; // PerspectiveMatrix
 
+    class TranslationMatrix : public Matrix<float, 4, 4>
+    {
+    public:
+        __host__ __device__ explicit TranslationMatrix(const Vector3<float>& translationVec)
+                : Matrix<float, 4, 4>(init(translationVec))
+        {
+        }
+
+    private:
+        __host__ __device__ static Matrix<float, 4, 4> init(const Vector3<float>& translationVec)
+        {
+            return {{1.f, 0.f, 0.f, translationVec.x()},
+                    {0.f, 1.f, 0.f, translationVec.y()},
+                    {0.f, 0.f, 1.f, translationVec.z()},
+                    {0.f, 0.f, 0.f, 1.f}};
+        }
+
+    }; // TranslationMatrix
+
+    class ScalingMatrix : public Matrix<float, 4, 4>
+    {
+    public:
+        __host__ __device__ explicit ScalingMatrix(const Vector3<float>& scalingVec)
+                : Matrix<float, 4, 4>(init(scalingVec))
+        {
+        }
+
+    private:
+        __host__ __device__ static Matrix<float, 4, 4> init(const Vector3<float>& scalingVec)
+        {
+            return {{scalingVec.x(), 0.f,            0.f,            0.f},
+                    {0.f,            scalingVec.y(), 0.f,            0.f},
+                    {0.f,            0.f,            scalingVec.z(), 0.f},
+                    {0.f,            0.f,            0.f,            1.f}};
+        }
+
+    }; // ScalingMatrix
+
     class OrtProjMatrix : public Matrix<float, 4, 4>
     {
     public:
-        __host__ __device__ explicit OrtProjMatrix(const Vector3<float>& fromMinCorner,
-                                                   const Vector3<float>& fromMaxCorner,
-                                                   const Vector3<float>& toMinCorner,
-                                                   const Vector3<float>& toMaxCorner) : Matrix<float, 4, 4>(
-                init(fromMinCorner,
-                     fromMaxCorner,
-                     toMinCorner,
-                     toMaxCorner))
+        __host__ __device__ OrtProjMatrix(const Vector3<float>& fromMinCorner,
+                                          const Vector3<float>& fromMaxCorner,
+                                          const Vector3<float>& toMinCorner,
+                                          const Vector3<float>& toMaxCorner)
+                : Matrix<float, 4, 4>(init(fromMinCorner,
+                                           fromMaxCorner,
+                                           toMinCorner,
+                                           toMaxCorner))
         {
         }
 
@@ -413,16 +451,10 @@ namespace Custosh
                                                             const Vector3<float>& toMaxCorner)
         {
             auto centerTranslationVec = Vector3<float>(boxCenter(fromMinCorner, fromMaxCorner) * -1);
-            Matrix<float, 4, 4> centerTranslationMatrix = {{1.f, 0.f, 0.f, centerTranslationVec.x()},
-                                                           {0.f, 1.f, 0.f, centerTranslationVec.y()},
-                                                           {0.f, 0.f, 1.f, centerTranslationVec.z()},
-                                                           {0.f, 0.f, 0.f, 1.f}};
+            TranslationMatrix centerTranslationMatrix(centerTranslationVec);
 
             Vector3<float> toTranslationVec = boxCenter(toMinCorner, toMaxCorner);
-            Matrix<float, 4, 4> toTranslationMatrix = {{1.f, 0.f, 0.f, toTranslationVec.x()},
-                                                       {0.f, 1.f, 0.f, toTranslationVec.y()},
-                                                       {0.f, 0.f, 1.f, toTranslationVec.z()},
-                                                       {0.f, 0.f, 0.f, 1.f}};
+            TranslationMatrix toTranslationMatrix(toTranslationVec);
 
             auto scalingVecAuxTo = Vector3<float>(toMaxCorner - toMinCorner);
             auto scalingVecAuxFrom = Vector3<float>(fromMaxCorner - fromMinCorner);
@@ -431,10 +463,7 @@ namespace Custosh
                                             scalingVecAuxTo.y() / scalingVecAuxFrom.y(),
                                             scalingVecAuxTo.z() / scalingVecAuxFrom.z()};
 
-            Matrix<float, 4, 4> scalingMatrix = {{scalingVecAux.x(), 0.f,               0.f,               0.f},
-                                                 {0.f,               scalingVecAux.y(), 0.f,               0.f},
-                                                 {0.f,               0.f,               scalingVecAux.z(), 0.f},
-                                                 {0.f,               0.f,               0.f,               1.f}};
+            ScalingMatrix scalingMatrix(scalingVecAux);
 
             return toTranslationMatrix * scalingMatrix * centerTranslationMatrix;
         }
@@ -447,15 +476,15 @@ namespace Custosh
 
     }; // OrtProjMatrix
 
-    class PPM : public Matrix<float, 4, 4>
+    class PerspectiveProjMatrix : public Matrix<float, 4, 4>
     {
     public:
-        __host__ __device__ explicit PPM(const PerspectiveMatrix& pm, const OrtProjMatrix& opm) : Matrix<float, 4, 4>(
-                opm * pm)
+        __host__ __device__ PerspectiveProjMatrix(const PerspectiveMatrix& pm, const OrtProjMatrix& opm)
+                : Matrix<float, 4, 4>(opm * pm)
         {
         }
 
-    }; // PPM
+    }; // PerspectiveProjMatrix
 
     template<typename T>
     class ResizableMatrix
@@ -513,7 +542,8 @@ namespace Custosh
         {
         }
 
-        __host__ __device__ BrightnessMap(unsigned int rows, unsigned int cols) : ResizableMatrix<float>(rows, cols)
+        __host__ __device__ BrightnessMap(unsigned int rows, unsigned int cols)
+                : ResizableMatrix<float>(rows, cols)
         {
         }
 
@@ -529,15 +559,10 @@ namespace Custosh
         }
 
     private:
-        __host__ __device__ static char brightnessToASCII(float brightness)
+        __host__ static char brightnessToASCII(float brightness)
         {
-#ifdef __CUDA_ARCH__
-            unsigned int idx = std::ceil(brightness * static_cast<float>(strlen(d_ASCIIByBrightness) - 2));
-            return d_ASCIIByBrightness[idx];
-#else
-            unsigned int idx = std::ceil(brightness * static_cast<float>(strlen(h_ASCIIByBrightness) - 2));
-            return h_ASCIIByBrightness[idx];
-#endif // __CUDA_ARCH__
+            unsigned int idx = std::ceil(brightness * static_cast<float>(ASCIIByBrightness.size() - 1));
+            return ASCIIByBrightness.at(idx);
         }
 
     }; // BrightnessMap
@@ -546,12 +571,14 @@ namespace Custosh
     class Quaternion
     {
     public:
-        __host__ __device__ Quaternion(T real, Vector3<T> imaginaryVec) : m_realPart(real),
-                                                                          m_imaginaryVec(std::move(imaginaryVec))
+        __host__ __device__ Quaternion(T real, Vector3<T> imaginaryVec)
+                : m_realPart(real),
+                  m_imaginaryVec(std::move(imaginaryVec))
         {
         }
 
-        __host__ __device__ Quaternion(T real, T i, T j, T k) : m_realPart(real), m_imaginaryVec({i, j, k})
+        __host__ __device__ Quaternion(T real, T i, T j, T k)
+                : m_realPart(real), m_imaginaryVec({i, j, k})
         {
         }
 
@@ -610,10 +637,10 @@ namespace Custosh
         Vector3<float> p1;
         Vector3<float> p2;
 
-        __host__ __device__ triangle3D_t(
-                const Vector3<float>& p0,
-                const Vector3<float>& p1,
-                const Vector3<float>& p2
+        __host__ __device__ explicit triangle3D_t(
+                const Vector3<float>& p0 = Vector3<float>(),
+                const Vector3<float>& p1 = Vector3<float>(),
+                const Vector3<float>& p2 = Vector3<float>()
         ) : p0(p0), p1(p1), p2(p2)
         {
         }
@@ -625,10 +652,10 @@ namespace Custosh
         Vector2<float> p1;
         Vector2<float> p2;
 
-        __host__ __device__ triangle2D_t(
-                const Vector2<float>& p0,
-                const Vector2<float>& p1,
-                const Vector2<float>& p2
+        __host__ __device__ explicit triangle2D_t(
+                const Vector2<float>& p0 = Vector2<float>(),
+                const Vector2<float>& p1 = Vector2<float>(),
+                const Vector2<float>& p2 = Vector2<float>()
         ) : p0(p0), p1(p1), p2(p2)
         {
         }
@@ -640,10 +667,10 @@ namespace Custosh
         unsigned int p1;
         unsigned int p2;
 
-        __host__ __device__ triangleIndices_t(
-                unsigned int p0,
-                unsigned int p1,
-                unsigned int p2
+        __host__ __device__ explicit triangleIndices_t(
+                unsigned int p0 = 0,
+                unsigned int p1 = 0,
+                unsigned int p2 = 0
         ) : p0(p0), p1(p1), p2(p2)
         {
         }
@@ -656,11 +683,11 @@ namespace Custosh
         int yMax;
         int yMin;
 
-        __host__ __device__ boundingBox_t(
-                int xMax,
-                int xMin,
-                int yMax,
-                int yMin
+        __host__ __device__ explicit boundingBox_t(
+                int xMax = 0,
+                int xMin = 0,
+                int yMax = 0,
+                int yMin = 0
         ) : xMax(xMax), xMin(xMin), yMax(yMax), yMin(yMin)
         {
         }
@@ -672,10 +699,10 @@ namespace Custosh
         float beta;
         float gamma;
 
-        __host__ __device__ barycentricCoords_t(
-                float alpha,
-                float beta,
-                float gamma
+        __host__ __device__ explicit barycentricCoords_t(
+                float alpha = 0.f,
+                float beta = 0.f,
+                float gamma = 0.f
         ) : alpha(alpha), beta(beta), gamma(gamma)
         {
         }
@@ -683,14 +710,14 @@ namespace Custosh
 
     struct pixel_t
     {
+        bool occupied;
         Vector3<float> coords;
         Vector3<float> normal;
-        bool occupied;
 
-        __host__ __device__ pixel_t(
-                const Vector3<float>& coords,
-                const Vector3<float>& normal,
-                bool occupied = false
+        __host__ __device__ explicit pixel_t(
+                bool occupied = false,
+                const Vector3<float>& coords = Vector3<float>(),
+                const Vector3<float>& normal = Vector3<float>()
         ) : occupied(occupied), coords(coords), normal(normal)
         {
         }
@@ -702,7 +729,7 @@ namespace Custosh
         float intensity;
 
         __host__ __device__ explicit lightSource_t(
-                const Vector3<float>& coords,
+                const Vector3<float>& coords = Vector3<float>(),
                 float intensity = 1.f
         ) : coords(coords), intensity(intensity)
         {

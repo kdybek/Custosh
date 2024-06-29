@@ -11,7 +11,7 @@ namespace Custosh::Renderer
         boundingBox_t findBounds(const triangle2D_t& triangle2D,
                                  const ResizableMatrix<T>& screen)
         {
-            boundingBox_t boundingBox(0, 0, 0, 0);
+            boundingBox_t boundingBox;
             float xMax = std::max({std::ceil(triangle2D.p0.x()),
                                    std::ceil(triangle2D.p1.x()),
                                    std::ceil(triangle2D.p2.x())});
@@ -72,18 +72,18 @@ namespace Custosh::Renderer
         }
 
         Vector2<float> applyPerspectivePoint(const Vector3<float>& p,
-                                             const PPM& ppm)
+                                             const PerspectiveProjMatrix& ppm)
         {
             Vector4<float> pPerspective = Vector4<float>(ppm * p.toHomogeneous()).normalizeW();
             return {pPerspective.x(), pPerspective.y()};
         }
 
         triangle2D_t applyPerspectiveTriangle(const triangle3D_t& triangle3D,
-                                              const PPM& ppm)
+                                              const PerspectiveProjMatrix& ppm)
         {
-            return {applyPerspectivePoint(triangle3D.p0, ppm),
-                    applyPerspectivePoint(triangle3D.p1, ppm),
-                    applyPerspectivePoint(triangle3D.p2, ppm)};
+            return triangle2D_t(applyPerspectivePoint(triangle3D.p0, ppm),
+                                applyPerspectivePoint(triangle3D.p1, ppm),
+                                applyPerspectivePoint(triangle3D.p2, ppm));
         }
 
         Vector3<float> getCartesianCoords(const triangle3D_t& triangle3D, const barycentricCoords_t& bc)
@@ -138,7 +138,7 @@ namespace Custosh::Renderer
 
     void rasterizeModel(const Model& model,
                         ResizableMatrix<pixel_t>& screen,
-                        const PPM& ppm)
+                        const PerspectiveProjMatrix& ppm)
     {
         for (const auto& triangle: model.getTriangles()) {
             rasterizeTriangle(triangle, screen, ppm);
@@ -147,11 +147,11 @@ namespace Custosh::Renderer
 
     void rasterizeTriangle(triangle3D_t triangle3D,
                            ResizableMatrix<pixel_t>& screen,
-                           const PPM& ppm)
+                           const PerspectiveProjMatrix& ppm)
     {
         triangle2D_t triangle2D = applyPerspectiveTriangle(triangle3D, ppm);
         float triangleArea2x = cross2D(triangle2D.p0, triangle2D.p2, triangle2D.p1);
-        barycentricCoords_t bc(0.f, 0.f, 0.f);
+        barycentricCoords_t bc;
 
         // In other functions the triangles' vertices are assumed to be in a clockwise order.
         if (triangleArea2x < 0.f) {

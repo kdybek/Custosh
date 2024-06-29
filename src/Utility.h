@@ -9,16 +9,18 @@
 #include <vector>
 #include <cmath>
 #include <numbers>
+#include <cuda_runtime.h>
 
 namespace Custosh
 {
-    extern const std::string ASCIIByBrightness;
+    inline const std::string ASCIIByBrightness =
+            R"( .'`,_^"-+:;!><~?iI[]{}1()|\/tfjrnxuvczXYUJCLQ0OZmwqpdkbhao*#MW&8%B@$)";
 
     template<typename T, unsigned int Rows, unsigned int Cols>
     class Matrix
     {
     public:
-        Matrix()
+        __host__ __device__ Matrix()
         {
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < Cols; ++j) {

@@ -2,7 +2,7 @@
 #define CUSTOSH_RENDERER_H
 
 
-#include "Utility.h"
+#include "Utility.cuh"
 #include "Model.h"
 
 namespace Custosh::Renderer

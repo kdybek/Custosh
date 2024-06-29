@@ -6,7 +6,7 @@
 #include <windows.h>
 
 #include "CustoshExcept.h"
-#include "Utility.h"
+#include "Utility.cuh"
 
 namespace Custosh
 {

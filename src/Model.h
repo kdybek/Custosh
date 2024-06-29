@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "Utility.h"
+#include "Utility.cuh"
 
 namespace Custosh
 {

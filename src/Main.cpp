@@ -4,7 +4,7 @@
 #include <thread>
 #include <algorithm>
 
-#include "Utility.h"
+#include "Utility.cuh"
 #include "Renderer.h"
 #include "Model.h"
 #include "WindowsConsoleScreenBuffer.h"

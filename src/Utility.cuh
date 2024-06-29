@@ -1,5 +1,5 @@
-#ifndef CUSTOSH_UTILITY_H
-#define CUSTOSH_UTILITY_H
+#ifndef CUSTOSH_UTILITY_CUH
+#define CUSTOSH_UTILITY_CUH
 
 
 #include <array>
@@ -650,4 +650,4 @@ namespace Custosh
 } // Custosh
 
 
-#endif // CUSTOSH_UTILITY_H
+#endif // CUSTOSH_UTILITY_CUH

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 project(Custosh LANGUAGES CUDA CXX)
 
 add_executable(Custosh
-        src/Main.cpp
+        src/Main.cu
         src/Utility.cuh
         src/Renderer.h
         src/Renderer.cpp

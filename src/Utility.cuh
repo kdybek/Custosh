@@ -13,7 +13,10 @@
 
 namespace Custosh
 {
-    inline const std::string ASCIIByBrightness =
+    inline const char* h_ASCIIByBrightness =
+            R"( .'`,_^"-+:;!><~?iI[]{}1()|\/tfjrnxuvczXYUJCLQ0OZmwqpdkbhao*#MW&8%B@$)";
+
+    __constant__ inline const char* d_ASCIIByBrightness =
             R"( .'`,_^"-+:;!><~?iI[]{}1()|\/tfjrnxuvczXYUJCLQ0OZmwqpdkbhao*#MW&8%B@$)";
 
     template<typename T, unsigned int Rows, unsigned int Cols>
@@ -24,82 +27,82 @@ namespace Custosh
         {
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < Cols; ++j) {
-                    m_matrix.at(i).at(j) = T();
+                    m_matrix[i][j] = T();
                 }
             }
         }
 
-        Matrix(const std::initializer_list<std::initializer_list<T>>& init)
+        __host__ __device__ Matrix(const std::initializer_list<std::initializer_list<T>>& init)
         {
             unsigned int i = 0;
             for (const auto& row: init) {
                 unsigned int j = 0;
                 for (const auto& elem: row) {
-                    m_matrix.at(i).at(j) = elem;
+                    m_matrix[i][j] = elem;
                     ++j;
                 }
                 ++i;
             }
         }
 
-        T& operator()(unsigned int row, unsigned int col)
+        __host__ __device__ T& operator()(unsigned int row, unsigned int col)
         {
-            return m_matrix.at(row).at(col);
+            return m_matrix[row][col];
         }
 
-        const T& operator()(unsigned int row, unsigned int col) const
+        __host__ __device__ const T& operator()(unsigned int row, unsigned int col) const
         {
-            return m_matrix.at(row).at(col);
+            return m_matrix[row][col];
         }
 
-        [[nodiscard]] unsigned int getNRows() const
+        [[nodiscard]] __host__ __device__ unsigned int getNRows() const
         {
             return Rows;
         }
 
-        [[nodiscard]] unsigned int getNCols() const
+        [[nodiscard]] __host__ __device__ unsigned int getNCols() const
         {
             return Cols;
         }
 
-        Matrix<T, Rows, Cols> operator*(const T& scalar) const
+        __host__ __device__ Matrix<T, Rows, Cols> operator*(const T& scalar) const
         {
             Matrix<T, Rows, Cols> result;
 
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < Cols; ++j) {
-                    result(i, j) = scalar * m_matrix.at(i).at(j);
+                    result(i, j) = scalar * m_matrix[i][j];
                 }
             }
 
             return result;
         }
 
-        friend Matrix<T, Rows, Cols> operator*(const T& scalar, const Matrix& matrix)
+        __host__ __device__ friend Matrix<T, Rows, Cols> operator*(const T& scalar, const Matrix& matrix)
         {
             return matrix * scalar;
         }
 
-        Matrix<T, Rows, Cols> operator+(const Matrix<T, Rows, Cols>& other) const
+        __host__ __device__ Matrix<T, Rows, Cols> operator+(const Matrix<T, Rows, Cols>& other) const
         {
             Matrix<T, Rows, Cols> result;
 
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < Cols; ++j) {
-                    result(i, j) = m_matrix.at(i).at(j) + other(i, j);
+                    result(i, j) = m_matrix[i][j] + other(i, j);
                 }
             }
 
             return result;
         }
 
-        Matrix<T, Rows, Cols> operator-(const Matrix<T, Rows, Cols>& other) const
+        __host__ __device__ Matrix<T, Rows, Cols> operator-(const Matrix<T, Rows, Cols>& other) const
         {
             return *this + -1 * other;
         }
 
         template<unsigned int OtherCols>
-        Matrix<T, Rows, OtherCols> operator*(const Matrix<T, Cols, OtherCols>& other) const
+        __host__ __device__ Matrix<T, Rows, OtherCols> operator*(const Matrix<T, Cols, OtherCols>& other) const
         {
             Matrix<T, Rows, OtherCols> result;
 
@@ -107,7 +110,7 @@ namespace Custosh
                 for (unsigned int j = 0; j < OtherCols; ++j) {
                     result(i, j) = T();
                     for (unsigned int k = 0; k < Cols; ++k) {
-                        result(i, j) += m_matrix.at(i).at(k) * other(k, j);
+                        result(i, j) += m_matrix[i][k] * other(k, j);
                     }
                 }
             }
@@ -115,13 +118,13 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] Matrix<T, Cols, Rows> transpose() const
+        [[nodiscard]] __host__ __device__ Matrix<T, Cols, Rows> transpose() const
         {
             Matrix<T, Cols, Rows> result;
 
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < Cols; ++j) {
-                    result(j, i) = m_matrix.at(i).at(j);
+                    result(j, i) = m_matrix[i][j];
                 }
             }
 
@@ -129,7 +132,7 @@ namespace Custosh
         }
 
     protected:
-        std::array<std::array<T, Cols>, Rows> m_matrix;
+        T m_matrix[Rows][Cols];
 
     }; // Matrix
 
@@ -137,39 +140,39 @@ namespace Custosh
     class Vector : public Matrix<T, Size, 1>
     {
     public:
-        Vector() : Matrix<T, Size, 1>()
+        __host__ __device__ Vector() : Matrix<T, Size, 1>()
         {
         }
 
-        explicit Vector(Matrix<T, Size, 1> matrix) : Matrix<T, Size, 1>(matrix)
+        __host__ __device__ explicit Vector(Matrix<T, Size, 1> matrix) : Matrix<T, Size, 1>(matrix)
         {
         }
 
-        Vector(const std::initializer_list<T>& init)
+        __host__ __device__ Vector(const std::initializer_list<T>& init)
         {
             unsigned int i = 0;
             for (const auto& elem: init) {
-                this->m_matrix.at(i).at(0) = elem;
+                this->m_matrix[i][0] = elem;
                 ++i;
             }
         }
 
-        T& operator()(unsigned int index)
+        __host__ __device__ T& operator()(unsigned int index)
         {
-            return this->m_matrix.at(index).at(0);
+            return this->m_matrix[index][0];
         }
 
-        const T& operator()(unsigned int index) const
+        __host__ __device__ const T& operator()(unsigned int index) const
         {
-            return this->m_matrix.at(index).at(0);
+            return this->m_matrix[index][0];
         }
 
-        [[nodiscard]] T dot(const Vector<T, Size>& other) const
+        [[nodiscard]] __host__ __device__ T dot(const Vector<T, Size>& other) const
         {
             return ((*this).transpose() * other)(0, 0);
         }
 
-        [[nodiscard]] T normSq() const
+        [[nodiscard]] __host__ __device__ T normSq() const
         {
             T normSq = T();
 
@@ -180,7 +183,7 @@ namespace Custosh
             return normSq;
         }
 
-        [[nodiscard]] Vector<T, Size> normalized() const
+        [[nodiscard]] __host__ __device__ Vector<T, Size> normalized() const
         {
             T normSquared = normSq();
 
@@ -195,38 +198,38 @@ namespace Custosh
     class Vector2 : public Vector<T, 2>
     {
     public:
-        Vector2() : Vector<T, 2>()
+        __host__ __device__ Vector2() : Vector<T, 2>()
         {
         }
 
-        explicit Vector2(Vector<T, 2> vector) : Vector<T, 2>(vector)
+        __host__ __device__ explicit Vector2(Vector<T, 2> vector) : Vector<T, 2>(vector)
         {
         }
 
-        explicit Vector2(Matrix<T, 2, 1> matrix) : Vector<T, 2>(matrix)
+        __host__ __device__ explicit Vector2(Matrix<T, 2, 1> matrix) : Vector<T, 2>(matrix)
         {
         }
 
-        Vector2(const std::initializer_list<T>& init) : Vector<T, 2>(init)
+        __host__ __device__ Vector2(const std::initializer_list<T>& init) : Vector<T, 2>(init)
         {
         }
 
-        T& x()
-        {
-            return (*this)(0);
-        }
-
-        [[nodiscard]] const T& x() const
+        __host__ __device__ T& x()
         {
             return (*this)(0);
         }
 
-        T& y()
+        [[nodiscard]] __host__ __device__ const T& x() const
+        {
+            return (*this)(0);
+        }
+
+        __host__ __device__ T& y()
         {
             return (*this)(1);
         }
 
-        [[nodiscard]] const T& y() const
+        [[nodiscard]] __host__ __device__ const T& y() const
         {
             return (*this)(1);
         }
@@ -237,63 +240,63 @@ namespace Custosh
     class Vector4 : public Vector<T, 4>
     {
     public:
-        Vector4() : Vector<T, 4>()
+        __host__ __device__ Vector4() : Vector<T, 4>()
         {
         }
 
-        explicit Vector4(Vector<T, 4> vector) : Vector<T, 4>(vector)
+        __host__ __device__ explicit Vector4(Vector<T, 4> vector) : Vector<T, 4>(vector)
         {
         }
 
-        explicit Vector4(Matrix<T, 4, 1> matrix) : Vector<T, 4>(matrix)
+        __host__ __device__ explicit Vector4(Matrix<T, 4, 1> matrix) : Vector<T, 4>(matrix)
         {
         }
 
-        Vector4(const std::initializer_list<T>& init) : Vector<T, 4>(init)
+        __host__ __device__ Vector4(const std::initializer_list<T>& init) : Vector<T, 4>(init)
         {
         }
 
-        T& x()
-        {
-            return (*this)(0);
-        }
-
-        [[nodiscard]] const T& x() const
+        __host__ __device__ T& x()
         {
             return (*this)(0);
         }
 
-        T& y()
+        [[nodiscard]] __host__ __device__ const T& x() const
+        {
+            return (*this)(0);
+        }
+
+        __host__ __device__ T& y()
         {
             return (*this)(1);
         }
 
-        [[nodiscard]] const T& y() const
+        [[nodiscard]] __host__ __device__ const T& y() const
         {
             return (*this)(1);
         }
 
-        T& z()
+        __host__ __device__ T& z()
         {
             return (*this)(2);
         }
 
-        [[nodiscard]] const T& z() const
+        [[nodiscard]] __host__ __device__ const T& z() const
         {
             return (*this)(2);
         }
 
-        T& w()
+        __host__ __device__ T& w()
         {
             return (*this)(3);
         }
 
-        [[nodiscard]] const T& w() const
+        [[nodiscard]] __host__ __device__ const T& w() const
         {
             return (*this)(3);
         }
 
-        [[nodiscard]] Vector4<T> normalizeW() const
+        [[nodiscard]] __host__ __device__ Vector4<T> normalizeW() const
         {
             Vector4<T> result;
 
@@ -311,53 +314,53 @@ namespace Custosh
     class Vector3 : public Vector<T, 3>
     {
     public:
-        Vector3() : Vector<T, 3>()
+        __host__ __device__ Vector3() : Vector<T, 3>()
         {
         }
 
-        explicit Vector3(Vector<T, 3> vector) : Vector<T, 3>(vector)
+        __host__ __device__ explicit Vector3(Vector<T, 3> vector) : Vector<T, 3>(vector)
         {
         }
 
-        explicit Vector3(Matrix<T, 3, 1> matrix) : Vector<T, 3>(matrix)
+        __host__ __device__ explicit Vector3(Matrix<T, 3, 1> matrix) : Vector<T, 3>(matrix)
         {
         }
 
-        Vector3(const std::initializer_list<T>& init) : Vector<T, 3>(init)
+        __host__ __device__ Vector3(const std::initializer_list<T>& init) : Vector<T, 3>(init)
         {
         }
 
-        T& x()
-        {
-            return (*this)(0);
-        }
-
-        [[nodiscard]] const T& x() const
+        __host__ __device__ T& x()
         {
             return (*this)(0);
         }
 
-        T& y()
+        [[nodiscard]] __host__ __device__ const T& x() const
+        {
+            return (*this)(0);
+        }
+
+        __host__ __device__ T& y()
         {
             return (*this)(1);
         }
 
-        [[nodiscard]] const T& y() const
+        [[nodiscard]] __host__ __device__ const T& y() const
         {
             return (*this)(1);
         }
 
-        T& z()
+        __host__ __device__ T& z()
         {
             return (*this)(2);
         }
 
-        [[nodiscard]] const T& z() const
+        [[nodiscard]] __host__ __device__ const T& z() const
         {
             return (*this)(2);
         }
 
-        [[nodiscard]] Vector3<T> cross(const Vector3<T>& other) const
+        [[nodiscard]] __host__ __device__ Vector3<T> cross(const Vector3<T>& other) const
         {
             Vector3<T> result;
 
@@ -368,7 +371,7 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] Vector4<T> toHomogeneous() const
+        [[nodiscard]] __host__ __device__ Vector4<T> toHomogeneous() const
         {
             return {x(), y(), z(), 1};
         }
@@ -378,7 +381,7 @@ namespace Custosh
     class PerspectiveMatrix : public Matrix<float, 4, 4>
     {
     public:
-        explicit PerspectiveMatrix(float nearPlaneDist, float farPlaneDist) : Matrix<float, 4, 4>()
+        __host__ __device__ explicit PerspectiveMatrix(float nearPlaneDist, float farPlaneDist) : Matrix<float, 4, 4>()
         {
             (*this)(0, 0) = nearPlaneDist;
             (*this)(1, 1) = nearPlaneDist;
@@ -392,21 +395,22 @@ namespace Custosh
     class OrtProjMatrix : public Matrix<float, 4, 4>
     {
     public:
-        explicit OrtProjMatrix(const Vector3<float>& fromMinCorner,
-                               const Vector3<float>& fromMaxCorner,
-                               const Vector3<float>& toMinCorner,
-                               const Vector3<float>& toMaxCorner) : Matrix<float, 4, 4>(init(fromMinCorner,
-                                                                                             fromMaxCorner,
-                                                                                             toMinCorner,
-                                                                                             toMaxCorner))
+        __host__ __device__ explicit OrtProjMatrix(const Vector3<float>& fromMinCorner,
+                                                   const Vector3<float>& fromMaxCorner,
+                                                   const Vector3<float>& toMinCorner,
+                                                   const Vector3<float>& toMaxCorner) : Matrix<float, 4, 4>(
+                init(fromMinCorner,
+                     fromMaxCorner,
+                     toMinCorner,
+                     toMaxCorner))
         {
         }
 
     private:
-        static Matrix<float, 4, 4> init(const Vector3<float>& fromMinCorner,
-                                        const Vector3<float>& fromMaxCorner,
-                                        const Vector3<float>& toMinCorner,
-                                        const Vector3<float>& toMaxCorner)
+        __host__ __device__ static Matrix<float, 4, 4> init(const Vector3<float>& fromMinCorner,
+                                                            const Vector3<float>& fromMaxCorner,
+                                                            const Vector3<float>& toMinCorner,
+                                                            const Vector3<float>& toMaxCorner)
         {
             auto centerTranslationVec = Vector3<float>(boxCenter(fromMinCorner, fromMaxCorner) * -1);
             Matrix<float, 4, 4> centerTranslationMatrix = {{1.f, 0.f, 0.f, centerTranslationVec.x()},
@@ -435,8 +439,8 @@ namespace Custosh
             return toTranslationMatrix * scalingMatrix * centerTranslationMatrix;
         }
 
-        static Vector3<float> boxCenter(const Vector3<float>& minCorner,
-                                        const Vector3<float>& maxCorner)
+        __host__ __device__ static Vector3<float> boxCenter(const Vector3<float>& minCorner,
+                                                            const Vector3<float>& maxCorner)
         {
             return Vector3<float>((minCorner + maxCorner) * 0.5f);
         }
@@ -446,7 +450,8 @@ namespace Custosh
     class PPM : public Matrix<float, 4, 4>
     {
     public:
-        explicit PPM(const PerspectiveMatrix& pm, const OrtProjMatrix& opm) : Matrix<float, 4, 4>(opm * pm)
+        __host__ __device__ explicit PPM(const PerspectiveMatrix& pm, const OrtProjMatrix& opm) : Matrix<float, 4, 4>(
+                opm * pm)
         {
         }
 
@@ -456,40 +461,40 @@ namespace Custosh
     class ResizableMatrix
     {
     public:
-        ResizableMatrix() : m_rows(0), m_cols(0)
+        __host__ ResizableMatrix() : m_rows(0), m_cols(0)
         {
         }
 
-        ResizableMatrix(unsigned int rows, unsigned int cols)
+        __host__ ResizableMatrix(unsigned int rows, unsigned int cols)
                 : m_rows(rows),
                   m_cols(cols),
                   m_matrix(rows * cols)
         {
         }
 
-        void resize(unsigned int newRows, unsigned int newCols)
+        __host__ void resize(unsigned int newRows, unsigned int newCols)
         {
             m_matrix.resize(newRows * newCols);
             m_rows = newRows;
             m_cols = newCols;
         }
 
-        T& operator()(unsigned int row, unsigned int col)
+        __host__ T& operator()(unsigned int row, unsigned int col)
         {
             return m_matrix.at(m_cols * row + col);
         }
 
-        const T& operator()(unsigned int row, unsigned int col) const
+        __host__ const T& operator()(unsigned int row, unsigned int col) const
         {
             return m_matrix.at(m_cols * row + col);
         }
 
-        [[nodiscard]] unsigned int getNRows() const
+        [[nodiscard]] __host__ unsigned int getNRows() const
         {
             return m_rows;
         }
 
-        [[nodiscard]] unsigned int getNCols() const
+        [[nodiscard]] __host__ unsigned int getNCols() const
         {
             return m_cols;
         }
@@ -504,15 +509,15 @@ namespace Custosh
     class BrightnessMap : public ResizableMatrix<float>
     {
     public:
-        BrightnessMap() : ResizableMatrix<float>()
+        __host__ __device__ BrightnessMap() : ResizableMatrix<float>()
         {
         }
 
-        BrightnessMap(unsigned int rows, unsigned int cols) : ResizableMatrix<float>(rows, cols)
+        __host__ __device__ BrightnessMap(unsigned int rows, unsigned int cols) : ResizableMatrix<float>(rows, cols)
         {
         }
 
-        [[nodiscard]] std::string rowToString(unsigned int row) const
+        [[nodiscard]] __host__ std::string rowToString(unsigned int row) const
         {
             std::string buffer;
 
@@ -524,10 +529,15 @@ namespace Custosh
         }
 
     private:
-        static char brightnessToASCII(float brightness)
+        __host__ __device__ static char brightnessToASCII(float brightness)
         {
-            unsigned int idx = std::ceil(brightness * static_cast<float>(ASCIIByBrightness.size() - 1));
-            return ASCIIByBrightness.at(idx);
+#ifdef __CUDA_ARCH__
+            unsigned int idx = std::ceil(brightness * static_cast<float>(strlen(d_ASCIIByBrightness) - 2));
+            return d_ASCIIByBrightness[idx];
+#else
+            unsigned int idx = std::ceil(brightness * static_cast<float>(strlen(h_ASCIIByBrightness) - 2));
+            return h_ASCIIByBrightness[idx];
+#endif // __CUDA_ARCH__
         }
 
     }; // BrightnessMap
@@ -536,40 +546,41 @@ namespace Custosh
     class Quaternion
     {
     public:
-        Quaternion(T real, Vector3<T> imaginaryVec) : m_realPart(real), m_imaginaryVec(std::move(imaginaryVec))
+        __host__ __device__ Quaternion(T real, Vector3<T> imaginaryVec) : m_realPart(real),
+                                                                          m_imaginaryVec(std::move(imaginaryVec))
         {
         }
 
-        Quaternion(T real, T i, T j, T k) : m_realPart(real), m_imaginaryVec({i, j, k})
+        __host__ __device__ Quaternion(T real, T i, T j, T k) : m_realPart(real), m_imaginaryVec({i, j, k})
         {
         }
 
-        [[nodiscard]] T getRealPart() const
+        [[nodiscard]] __host__ __device__ T getRealPart() const
         {
             return m_realPart;
         }
 
-        [[nodiscard]] Vector3<T> getImaginaryVec() const
+        [[nodiscard]] __host__ __device__ Vector3<T> getImaginaryVec() const
         {
             return m_imaginaryVec;
         }
 
-        Quaternion<T> operator*(const T& scalar) const
+        __host__ __device__ Quaternion<T> operator*(const T& scalar) const
         {
             return {scalar * m_realPart, Vector3<T>(scalar * m_imaginaryVec)};
         }
 
-        friend Quaternion<T> operator*(const T& scalar, const Quaternion<T>& quaternion)
+        __host__ __device__ friend Quaternion<T> operator*(const T& scalar, const Quaternion<T>& quaternion)
         {
             return quaternion * scalar;
         }
 
-        Quaternion<T> operator+(const Quaternion& other) const
+        __host__ __device__ Quaternion<T> operator+(const Quaternion& other) const
         {
             return {m_realPart + other.m_realPart, m_imaginaryVec + other.m_imaginaryVec};
         }
 
-        Quaternion<T> operator*(const Quaternion& other) const
+        __host__ __device__ Quaternion<T> operator*(const Quaternion& other) const
         {
             return {m_realPart * other.m_realPart - m_imaginaryVec.dot(other.m_imaginaryVec),
                     Vector3<float>(m_realPart * other.m_imaginaryVec +
@@ -577,12 +588,12 @@ namespace Custosh
                                    m_imaginaryVec.cross(other.m_imaginaryVec))};
         }
 
-        [[nodiscard]] Quaternion<T> conjunction() const
+        [[nodiscard]] __host__ __device__ Quaternion<T> conjunction() const
         {
             return {m_realPart, Vector3<T>(-1 * m_imaginaryVec)};
         }
 
-        [[nodiscard]] T normSq() const
+        [[nodiscard]] __host__ __device__ T normSq() const
         {
             return m_realPart * m_realPart + m_imaginaryVec.normSq();
         }
@@ -598,6 +609,14 @@ namespace Custosh
         Vector3<float> p0;
         Vector3<float> p1;
         Vector3<float> p2;
+
+        __host__ __device__ triangle3D_t(
+                const Vector3<float>& p0,
+                const Vector3<float>& p1,
+                const Vector3<float>& p2
+        ) : p0(p0), p1(p1), p2(p2)
+        {
+        }
     };
 
     struct triangle2D_t
@@ -605,6 +624,14 @@ namespace Custosh
         Vector2<float> p0;
         Vector2<float> p1;
         Vector2<float> p2;
+
+        __host__ __device__ triangle2D_t(
+                const Vector2<float>& p0,
+                const Vector2<float>& p1,
+                const Vector2<float>& p2
+        ) : p0(p0), p1(p1), p2(p2)
+        {
+        }
     };
 
     struct triangleIndices_t
@@ -612,6 +639,14 @@ namespace Custosh
         unsigned int p0;
         unsigned int p1;
         unsigned int p2;
+
+        __host__ __device__ triangleIndices_t(
+                unsigned int p0,
+                unsigned int p1,
+                unsigned int p2
+        ) : p0(p0), p1(p1), p2(p2)
+        {
+        }
     };
 
     struct boundingBox_t
@@ -620,6 +655,15 @@ namespace Custosh
         int xMin;
         int yMax;
         int yMin;
+
+        __host__ __device__ boundingBox_t(
+                int xMax,
+                int xMin,
+                int yMax,
+                int yMin
+        ) : xMax(xMax), xMin(xMin), yMax(yMax), yMin(yMin)
+        {
+        }
     };
 
     struct barycentricCoords_t
@@ -627,22 +671,45 @@ namespace Custosh
         float alpha;
         float beta;
         float gamma;
+
+        __host__ __device__ barycentricCoords_t(
+                float alpha,
+                float beta,
+                float gamma
+        ) : alpha(alpha), beta(beta), gamma(gamma)
+        {
+        }
     };
 
     struct pixel_t
     {
-        bool occupied = false;
         Vector3<float> coords;
         Vector3<float> normal;
+        bool occupied;
+
+        __host__ __device__ pixel_t(
+                const Vector3<float>& coords,
+                const Vector3<float>& normal,
+                bool occupied = false
+        ) : occupied(occupied), coords(coords), normal(normal)
+        {
+        }
     };
 
     struct lightSource_t
     {
         Vector3<float> coords;
-        float intensity = 1.f; // 0 - 1
+        float intensity;
+
+        __host__ __device__ explicit lightSource_t(
+                const Vector3<float>& coords,
+                float intensity = 1.f
+        ) : coords(coords), intensity(intensity)
+        {
+        }
     };
 
-    inline float degreesToRadians(float degrees)
+    __host__ __device__ inline float degreesToRadians(float degrees)
     {
         return degrees * (std::numbers::pi_v<float> / 180.f);
     }

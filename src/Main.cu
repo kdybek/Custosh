@@ -4,8 +4,8 @@
 #include <algorithm>
 
 #include "Utility.cuh"
-#include "Renderer.h"
-#include "Model.h"
+#include "Renderer.cuh"
+#include "Mesh.h"
 #include "WindowsConsoleScreenBuffer.h"
 
 using namespace Custosh;
@@ -80,9 +80,9 @@ int main()
     cubeInd.emplace_back(0, 1, 5);
     cubeInd.emplace_back(5, 4, 0);
 
-    Model cube(cubeVer, cubeInd);
+    Mesh cube(cubeVer, cubeInd);
 
-    ResizableMatrix<pixel_t> screen(70, 70);
+    HostDevResizableMatrix<pixel_t> screen(70, 70);
     OrtProjMatrix opm({-1, -1, 1},
                       {1, 1, 10},
                       {0, 0, 0},
@@ -111,9 +111,9 @@ int main()
     while (true) {
         auto start = std::chrono::high_resolution_clock::now();
 
-        cube.rotate({0, 0, 2}, rotationAngle1, rotationVec1);
-        cube.rotate({0, 0, 2}, rotationAngle2, rotationVec2);
-        cube.rotate({0, 0, 2}, rotationAngle3, rotationVec3);
+        cube.rotate({0, 0, 2}, rotationVec1, rotationAngle1);
+        cube.rotate({0, 0, 2}, rotationVec2, rotationAngle2);
+        cube.rotate({0, 0, 2}, rotationVec3, rotationAngle3);
 
         Renderer::rasterizeModel(cube, screen, ppm);
         BrightnessMap bMap = Renderer::getBrightnessMap(screen, ls);
@@ -130,9 +130,9 @@ int main()
 
         start = std::chrono::high_resolution_clock::now();
 
-        cube.rotate({0, 0, 2}, rotationAngle1, rotationVec1);
-        cube.rotate({0, 0, 2}, rotationAngle2, rotationVec2);
-        cube.rotate({0, 0, 2}, rotationAngle3, rotationVec3);
+        cube.rotate({0, 0, 2}, rotationVec1, rotationAngle1);
+        cube.rotate({0, 0, 2}, rotationVec2, rotationAngle2);
+        cube.rotate({0, 0, 2}, rotationVec3, rotationAngle3);
 
         Renderer::rasterizeModel(cube, screen, ppm);
         bMap = Renderer::getBrightnessMap(screen, ls);

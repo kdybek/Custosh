@@ -1,5 +1,5 @@
-#ifndef CUSTOSH_MODEL_H
-#define CUSTOSH_MODEL_H
+#ifndef CUSTOSH_MESH_H
+#define CUSTOSH_MESH_H
 
 
 #include <utility>
@@ -10,10 +10,10 @@
 namespace Custosh
 {
 
-    class Model
+    class Mesh
     {
     public:
-        Model(std::vector<Vector3<float>> vertices, std::vector<triangleIndices_t> triangles)
+        Mesh(std::vector<Vector3<float>> vertices, std::vector<triangleIndices_t> triangles)
                 : m_vertices(std::move(vertices)),
                   m_triangles(std::move(triangles))
         {
@@ -33,9 +33,7 @@ namespace Custosh
             return result;
         }
 
-        void rotate(const Vector3<float>& origin,
-                    float angle,
-                    const Vector3<float>& rotationVec)
+        void rotate(const Vector3<float>& origin, const Vector3<float>& rotationVec, float angle)
         {
             Quaternion<float> rotationQ = {std::cos(angle / 2),
                                            Custosh::Vector3<float>(std::sin(angle / 2) * rotationVec)};
@@ -63,9 +61,9 @@ namespace Custosh
             return Vector3<float>(originNewVec3AsQ.getImaginaryVec() + origin);
         }
 
-    }; // Model
+    };
 
 } // Custosh
 
 
-#endif // CUSTOSH_MODEL_H
+#endif // CUSTOSH_MESH_H

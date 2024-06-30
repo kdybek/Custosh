@@ -1,7 +1,9 @@
-#include "Renderer.h"
+#include "Renderer.cuh"
 
 #include <cmath>
 #include <algorithm>
+
+#include "TriangleRegistry.cuh"
 
 namespace Custosh::Renderer
 {
@@ -9,7 +11,7 @@ namespace Custosh::Renderer
     {
         template<typename T>
         boundingBox_t findBounds(const triangle2D_t& triangle2D,
-                                 const ResizableMatrix<T>& screen)
+                                 const HostDevResizableMatrix<T>& screen)
         {
             boundingBox_t boundingBox;
             float xMax = std::max({std::ceil(triangle2D.p0.x()),
@@ -127,7 +129,7 @@ namespace Custosh::Renderer
 
     } // anonymous
 
-    void clearScreen(ResizableMatrix<pixel_t>& screen)
+    void clearScreen(HostDevResizableMatrix<pixel_t>& screen)
     {
         for (unsigned int i = 0; i < screen.getNRows(); ++i) {
             for (unsigned int j = 0; j < screen.getNCols(); ++j) {
@@ -136,17 +138,17 @@ namespace Custosh::Renderer
         }
     }
 
-    void rasterizeModel(const Model& model,
-                        ResizableMatrix<pixel_t>& screen,
+    void rasterizeModel(const Mesh& mesh,
+                        HostDevResizableMatrix<pixel_t>& screen,
                         const PerspectiveProjMatrix& ppm)
     {
-        for (const auto& triangle: model.getTriangles()) {
+        for (const auto& triangle: mesh.getTriangles()) {
             rasterizeTriangle(triangle, screen, ppm);
         }
     }
 
     void rasterizeTriangle(triangle3D_t triangle3D,
-                           ResizableMatrix<pixel_t>& screen,
+                           HostDevResizableMatrix<pixel_t>& screen,
                            const PerspectiveProjMatrix& ppm)
     {
         triangle2D_t triangle2D = applyPerspectiveTriangle(triangle3D, ppm);
@@ -188,7 +190,7 @@ namespace Custosh::Renderer
         }
     }
 
-    BrightnessMap getBrightnessMap(const ResizableMatrix<pixel_t>& screen,
+    BrightnessMap getBrightnessMap(const HostDevResizableMatrix<pixel_t>& screen,
                                    const lightSource_t& ls)
     {
         BrightnessMap bMap(screen.getNRows(), screen.getNCols());

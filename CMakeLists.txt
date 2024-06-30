@@ -4,12 +4,12 @@ project(Custosh LANGUAGES CUDA CXX)
 add_executable(Custosh
         src/Main.cu
         src/Utility.cuh
-        src/Renderer.h
-        src/Renderer.cpp
-        src/Utility.cuh
+        src/Renderer.cuh
+        src/Renderer.cu
         src/CustoshExcept.h
-        src/Model.h
+        src/Mesh.h
         src/WindowsConsoleScreenBuffer.h
+        src/TriangleRegistry.cuh
 )
 
 set_target_properties(Custosh PROPERTIES

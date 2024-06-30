@@ -9,6 +9,22 @@
 #include <numbers>
 #include <cuda_runtime.h>
 
+#include "CustoshExcept.h"
+
+#define CUDA_CHECK(call) \
+do { \
+    cudaError_t error = call; \
+    if (error != cudaSuccess) { \
+        std::string errMsg = "CUDA error at "; \
+        errMsg += __FILE__; \
+        errMsg += ":"; \
+        errMsg += std::to_string(__LINE__); \
+        errMsg += " - "; \
+        errMsg += cudaGetErrorString(error); \
+        throw CustoshException(errMsg); \
+    } \
+} while(0)
+
 namespace Custosh
 {
     inline const std::string ASCIIByBrightness =
@@ -487,63 +503,106 @@ namespace Custosh
     }; // PerspectiveProjMatrix
 
     template<typename T>
-    class ResizableMatrix
+    class HostDevResizableMatrix
     {
     public:
-        __host__ ResizableMatrix() : m_rows(0), m_cols(0)
+        __host__ HostDevResizableMatrix() : m_rows(0), m_cols(0)
         {
         }
 
-        __host__ ResizableMatrix(unsigned int rows, unsigned int cols)
+        __host__ HostDevResizableMatrix(unsigned int rows, unsigned int cols)
                 : m_rows(rows),
                   m_cols(cols),
-                  m_matrix(rows * cols)
+                  m_hostArrPtr(new T[rows * cols]),
+                  m_devArrPtr(nullptr)
         {
+            CUDA_CHECK(cudaMalloc(&m_devArrPtr, rows * cols));
         }
 
-        __host__ void resize(unsigned int newRows, unsigned int newCols)
+        __host__ ~HostDevResizableMatrix()
         {
-            m_matrix.resize(newRows * newCols);
+            delete[] m_hostArrPtr;
+            cudaFree(m_devArrPtr);
+        }
+
+        __host__ __device__ HostDevResizableMatrix(const HostDevResizableMatrix&) = delete;
+
+        __host__ __device__ HostDevResizableMatrix& operator=(const HostDevResizableMatrix&) = delete;
+
+        // The data in the matrix gets lost when resizing.
+        __host__ void resizeAndClean(unsigned int newRows, unsigned int newCols)
+        {
+            delete[] m_hostArrPtr;
+            CUDA_CHECK(cudaFree(m_devArrPtr));
+
+            m_hostArrPtr = new T[newRows * newCols];
+            CUDA_CHECK(cudaMalloc(&m_devArrPtr, newRows * newRows * sizeof(T)));
+
             m_rows = newRows;
             m_cols = newCols;
         }
 
-        __host__ T& operator()(unsigned int row, unsigned int col)
+        __host__ void loadToHost() const
         {
-            return m_matrix.at(m_cols * row + col);
+            CUDA_CHECK(cudaMemcpy(m_hostArrPtr,
+                                  m_devArrPtr,
+                                  m_rows * m_cols * sizeof(T),
+                                  cudaMemcpyDeviceToHost));
         }
 
-        __host__ const T& operator()(unsigned int row, unsigned int col) const
+        __host__ void loadToDev() const
         {
-            return m_matrix.at(m_cols * row + col);
+            CUDA_CHECK(cudaMemcpy(m_devArrPtr,
+                                  m_hostArrPtr,
+                                  m_rows * m_cols * sizeof(T),
+                                  cudaMemcpyHostToDevice));
         }
 
-        [[nodiscard]] __host__ unsigned int getNRows() const
+        __host__ __device__ T& operator()(unsigned int row, unsigned int col)
+        {
+#ifdef __CUDA_ARCH__
+            return m_devArrPtr[m_cols * row + col];
+#else
+            return m_hostArrPtr[m_cols * row + col];
+#endif
+        }
+
+        __host__ __device__ const T& operator()(unsigned int row, unsigned int col) const
+        {
+#ifdef __CUDA_ARCH__
+            return m_devArrPtr[m_cols * row + col];
+#else
+            return m_hostArrPtr[m_cols * row + col];
+#endif
+        }
+
+        [[nodiscard]] __host__ __device__ unsigned int getNRows() const
         {
             return m_rows;
         }
 
-        [[nodiscard]] __host__ unsigned int getNCols() const
+        [[nodiscard]] __host__ __device__ unsigned int getNCols() const
         {
             return m_cols;
         }
 
     protected:
-        std::vector<T> m_matrix;
         unsigned int m_rows;
         unsigned int m_cols;
+        T* m_hostArrPtr;
+        T* m_devArrPtr;
 
     }; // ResizableMatrix
 
-    class BrightnessMap : public ResizableMatrix<float>
+    class BrightnessMap : public HostDevResizableMatrix<float>
     {
     public:
-        __host__ __device__ BrightnessMap() : ResizableMatrix<float>()
+        __host__ __device__ BrightnessMap() : HostDevResizableMatrix<float>()
         {
         }
 
         __host__ __device__ BrightnessMap(unsigned int rows, unsigned int cols)
-                : ResizableMatrix<float>(rows, cols)
+                : HostDevResizableMatrix<float>(rows, cols)
         {
         }
 

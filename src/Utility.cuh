@@ -2,6 +2,7 @@
 #define CUSTOSH_UTILITY_CUH
 
 
+#include <iostream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -506,17 +507,13 @@ namespace Custosh
     class HostDevResizableMatrix
     {
     public:
-        __host__ HostDevResizableMatrix() : m_rows(0), m_cols(0)
-        {
-        }
-
         __host__ HostDevResizableMatrix(unsigned int rows, unsigned int cols)
                 : m_rows(rows),
                   m_cols(cols),
                   m_hostArrPtr(new T[rows * cols]),
                   m_devArrPtr(nullptr)
         {
-            CUDA_CHECK(cudaMalloc(&m_devArrPtr, rows * cols));
+            CUDA_CHECK(cudaMalloc(&m_devArrPtr, rows * cols * sizeof(T)));
         }
 
         __host__ ~HostDevResizableMatrix()
@@ -536,7 +533,7 @@ namespace Custosh
             CUDA_CHECK(cudaFree(m_devArrPtr));
 
             m_hostArrPtr = new T[newRows * newCols];
-            CUDA_CHECK(cudaMalloc(&m_devArrPtr, newRows * newRows * sizeof(T)));
+            CUDA_CHECK(cudaMalloc(&m_devArrPtr, newRows * newCols * sizeof(T)));
 
             m_rows = newRows;
             m_cols = newCols;
@@ -558,11 +555,28 @@ namespace Custosh
                                   cudaMemcpyHostToDevice));
         }
 
+        __host__ const T* devData() const
+        {
+            return m_devArrPtr;
+        }
+
+        __host__ T* devData()
+        {
+            return m_devArrPtr;
+        }
+
         __host__ __device__ T& operator()(unsigned int row, unsigned int col)
         {
 #ifdef __CUDA_ARCH__
+            if (row >= m_rows || col >= m_cols) {
+                printf("Index out of bounds: row = %u, col = %u\n", row, col);
+                asm("trap;");
+            }
             return m_devArrPtr[m_cols * row + col];
 #else
+            if (row >= m_rows || col >= m_cols) {
+                throw CustoshException("Index out of bounds");
+            }
             return m_hostArrPtr[m_cols * row + col];
 #endif
         }
@@ -570,8 +584,15 @@ namespace Custosh
         __host__ __device__ const T& operator()(unsigned int row, unsigned int col) const
         {
 #ifdef __CUDA_ARCH__
+            if (row >= m_rows || col >= m_cols) {
+                printf("Index out of bounds: row = %u, col = %u\n", row, col);
+                asm("trap;");
+            }
             return m_devArrPtr[m_cols * row + col];
 #else
+            if (row >= m_rows || col >= m_cols) {
+                throw CustoshException("Index out of bounds");
+            }
             return m_hostArrPtr[m_cols * row + col];
 #endif
         }
@@ -592,16 +613,12 @@ namespace Custosh
         T* m_hostArrPtr;
         T* m_devArrPtr;
 
-    }; // ResizableMatrix
+    }; // HostDevResizableMatrix
 
     class BrightnessMap : public HostDevResizableMatrix<float>
     {
     public:
-        __host__ __device__ BrightnessMap() : HostDevResizableMatrix<float>()
-        {
-        }
-
-        __host__ __device__ BrightnessMap(unsigned int rows, unsigned int cols)
+        __host__ BrightnessMap(unsigned int rows, unsigned int cols)
                 : HostDevResizableMatrix<float>(rows, cols)
         {
         }

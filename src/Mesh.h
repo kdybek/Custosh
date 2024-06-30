@@ -61,7 +61,7 @@ namespace Custosh
             return Vector3<float>(originNewVec3AsQ.getImaginaryVec() + origin);
         }
 
-    };
+    }; // Mesh
 
 } // Custosh
 

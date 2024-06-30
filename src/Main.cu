@@ -12,22 +12,22 @@ using namespace Custosh;
 
 __global__ void mul(const Matrix<int, 3, 3>* a, const Matrix<int, 3, 3>* b, Matrix<int, 3, 3>* res)
 {
-    *res =  *a * *b;
+    *res = *a * *b;
 }
 
 int main()
 {
     Matrix<int, 3, 3> h_a = {{1, 1, 1},
-                           {2, 2, 2},
-                           {3, 3, 3}};
+                             {2, 2, 2},
+                             {3, 3, 3}};
 
     Matrix<int, 3, 3> h_b = {{1, 1, 1},
-                           {2, 2, 2},
-                           {3, 3, 3}};
+                             {2, 2, 2},
+                             {3, 3, 3}};
 
     Matrix<int, 3, 3> h_res;
 
-    Matrix<int, 3, 3>* d_a,* d_b,* d_res;
+    Matrix<int, 3, 3>* d_a, * d_b, * d_res;
 
     cudaMalloc(&d_a, sizeof(Matrix<int, 3, 3>));
     cudaMalloc(&d_b, sizeof(Matrix<int, 3, 3>));
@@ -42,8 +42,7 @@ int main()
 
     std::cout << "Result: ";
     for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j)
-        {
+        for (int j = 0; j < 3; ++j) {
             std::cout << h_res(i, j) << " ";
         }
         std::cout << std::endl;
@@ -108,6 +107,8 @@ int main()
     WindowsConsoleScreenBuffer buf1;
     WindowsConsoleScreenBuffer buf2;
 
+    BrightnessMap bMap(70, 70);
+
     while (true) {
         auto start = std::chrono::high_resolution_clock::now();
 
@@ -116,7 +117,10 @@ int main()
         cube.rotate({0, 0, 2}, rotationVec3, rotationAngle3);
 
         Renderer::rasterizeModel(cube, screen, ppm);
-        BrightnessMap bMap = Renderer::getBrightnessMap(screen, ls);
+        screen.loadToDev();
+        Renderer::getBrightnessMap<<<1, 70>>>(screen.devData(), screen.getNRows(), screen.getNCols(), ls, bMap.devData());
+        cudaDeviceSynchronize();
+        bMap.loadToHost();
 
         buf1.draw(bMap);
         buf1.activate();
@@ -126,9 +130,9 @@ int main()
 
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long)0, 30 - elapsed.count())));
+        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long) 0, 30 - elapsed.count())));
 
-        start = std::chrono::high_resolution_clock::now();
+        /*start = std::chrono::high_resolution_clock::now();
 
         cube.rotate({0, 0, 2}, rotationVec1, rotationAngle1);
         cube.rotate({0, 0, 2}, rotationVec2, rotationAngle2);
@@ -145,6 +149,6 @@ int main()
 
         elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long)0, 30 - elapsed.count())));
+        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long)0, 30 - elapsed.count())));*/
     }
 }

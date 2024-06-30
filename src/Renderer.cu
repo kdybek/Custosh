@@ -95,12 +95,26 @@ namespace Custosh::Renderer
                     triangle3D.p0.z() * bc.alpha + triangle3D.p1.z() * bc.beta + triangle3D.p2.z() * bc.gamma};
         }
 
-        float distanceSq(const Vector3<float>& a, const Vector3<float>& b)
+        template<typename T>
+        __device__ T clamp(T a, T min, T max)
+        {
+            if (a < min) { return min; }
+            else if (a > max) { return max; }
+            else { return a; }
+        }
+
+        template<typename T>
+        __device__ T max(T a, T b)
+        {
+            return a < b ? b : a;
+        }
+
+        __device__ float distanceSq(const Vector3<float>& a, const Vector3<float>& b)
         {
             return static_cast<float>(pow((a.x() - b.x()), 2) + pow((a.y() - b.y()), 2) + pow((a.z() - b.z()), 2));
         }
 
-        float cosine3D(const Vector3<float>& center, const Vector3<float>& p1, const Vector3<float>& p2)
+        __device__ float cosine3D(const Vector3<float>& center, const Vector3<float>& p1, const Vector3<float>& p2)
         {
             auto vec1 = Vector3<float>(p1 - center);
             auto vec2 = Vector3<float>(p2 - center);
@@ -110,12 +124,12 @@ namespace Custosh::Renderer
             return vec1.dot(vec2) / (dist1 * dist2);
         }
 
-        float getPointBrightness(const pixel_t& p, const lightSource_t& ls)
+        __device__ float getPointBrightness(const pixel_t& p, const lightSource_t& ls)
         {
             float distSq = distanceSq(p.coords, ls.coords);
             float cos = cosine3D(p.coords, Vector3<float>(p.coords + p.normal), ls.coords);
 
-            return std::clamp(std::max(cos, 0.f) * ls.intensity / distSq, 0.f, 1.f);
+            return clamp(max(cos, 0.f) * ls.intensity / distSq, 0.f, 1.f);
         }
 
         // The vertices are clockwise oriented, but we're looking from 0 towards positive z values.
@@ -190,22 +204,22 @@ namespace Custosh::Renderer
         }
     }
 
-    BrightnessMap getBrightnessMap(const HostDevResizableMatrix<pixel_t>& screen,
-                                   const lightSource_t& ls)
+    __global__ void getBrightnessMap(const pixel_t* screen,
+                                     const unsigned int rows,
+                                     const unsigned int cols,
+                                     lightSource_t ls,
+                                     float* bMap)
     {
-        BrightnessMap bMap(screen.getNRows(), screen.getNCols());
+        unsigned int i = threadIdx.x;
 
-        for (unsigned int i = 0; i < screen.getNRows(); ++i) {
-            for (unsigned int j = 0; j < screen.getNCols(); ++j) {
-                const pixel_t& screenPoint = screen(i, j);
+        for (unsigned int j = 0; j < cols; ++j) {
+            const pixel_t& screenPoint = screen[i * cols + j];
 
-                if (screenPoint.occupied) {
-                    bMap(i, j) = getPointBrightness(screenPoint, ls);
-                }
+            if (screenPoint.occupied) {
+                bMap[i * cols + j] = getPointBrightness(screenPoint, ls);
             }
+            else { bMap[i * cols + j] = 0.f; }
         }
-
-        return bMap;
     }
 
 } // Custosh::Renderer

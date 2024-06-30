@@ -55,7 +55,7 @@ namespace Custosh
     private:
         HANDLE m_handle;
 
-    };
+    }; // WindowsConsoleScreenBuffer
 
 }
 

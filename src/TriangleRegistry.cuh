@@ -72,7 +72,7 @@ namespace Custosh
         triangle3D_t* m_devTrianglesPtr;
         unsigned int m_devTrianglesSize;
 
-    };
+    }; // TriangleRegistry
 
 } // Custosh
 

@@ -9,7 +9,6 @@ add_executable(Custosh
         src/CustoshExcept.h
         src/Mesh.h
         src/WindowsConsoleScreenBuffer.h
-        src/TriangleRegistry.cuh
 )
 
 set_target_properties(Custosh PROPERTIES

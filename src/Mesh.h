@@ -58,7 +58,7 @@ namespace Custosh
             Quaternion<float> originNewVec3AsQ =
                     normalizedRotationQ * originPVec3AsQ * normalizedRotationQ.conjunction();
 
-            return Vector3<float>(originNewVec3AsQ.getImaginaryVec() + origin);
+            return Vector3<float>(originNewVec3AsQ.imaginaryVec() + origin);
         }
 
     }; // Mesh

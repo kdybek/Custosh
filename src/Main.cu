@@ -10,48 +10,8 @@
 
 using namespace Custosh;
 
-__global__ void mul(const Matrix<int, 3, 3>* a, const Matrix<int, 3, 3>* b, Matrix<int, 3, 3>* res)
-{
-    *res = *a * *b;
-}
-
 int main()
 {
-    Matrix<int, 3, 3> h_a = {{1, 1, 1},
-                             {2, 2, 2},
-                             {3, 3, 3}};
-
-    Matrix<int, 3, 3> h_b = {{1, 1, 1},
-                             {2, 2, 2},
-                             {3, 3, 3}};
-
-    Matrix<int, 3, 3> h_res;
-
-    Matrix<int, 3, 3>* d_a, * d_b, * d_res;
-
-    cudaMalloc(&d_a, sizeof(Matrix<int, 3, 3>));
-    cudaMalloc(&d_b, sizeof(Matrix<int, 3, 3>));
-    cudaMalloc(&d_res, sizeof(Matrix<int, 3, 3>));
-
-    cudaMemcpy(d_a, &h_a, sizeof(Matrix<int, 3, 3>), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b, &h_b, sizeof(Matrix<int, 3, 3>), cudaMemcpyHostToDevice);
-
-    mul<<<1, 1>>>(d_a, d_b, d_res);
-
-    cudaMemcpy(&h_res, d_res, sizeof(Matrix<int, 3, 3>), cudaMemcpyDeviceToHost);
-
-    std::cout << "Result: ";
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            std::cout << h_res(i, j) << " ";
-        }
-        std::cout << std::endl;
-    }
-
-    cudaFree(d_a);
-    cudaFree(d_b);
-    cudaFree(d_res);
-
     std::vector<Vector3<float>> cubeVer;
     cubeVer.push_back({-0.5, -0.5, 1.5});
     cubeVer.push_back({0.5, -0.5, 1.5});
@@ -118,7 +78,7 @@ int main()
 
         Renderer::rasterizeModel(cube, screen, ppm);
         screen.loadToDev();
-        Renderer::getBrightnessMap<<<1, 70>>>(screen.devData(), screen.getNRows(), screen.getNCols(), ls, bMap.devData());
+        Renderer::getBrightnessMap<<<1, 70>>>(screen.devPtr(), screen.getNRows(), screen.getNCols(), ls, bMap.devPtr());
         cudaDeviceSynchronize();
         bMap.loadToHost();
 

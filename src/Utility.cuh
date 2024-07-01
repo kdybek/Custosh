@@ -2,7 +2,6 @@
 #define CUSTOSH_UTILITY_CUH
 
 
-#include <iostream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -26,11 +25,55 @@ do { \
     } \
 } while(0)
 
+#ifdef __CUDA_ARCH__
+#define HOST_DEV_ERR(message) \
+    do { \
+        printf(message); \
+        asm("trap;"); \
+    } while(0)
+#else
+#define HOST_DEV_ERR(message) \
+    do { \
+        throw CustoshException(message); \
+    } while(0)
+#endif
+
+#define INIT_LIST_ERR_MSG "incorrect initializer list"
+#define IDX_ERR_MSG "index out of bounds"
+
 namespace Custosh
 {
+    /* Constants */
     inline const std::string ASCIIByBrightness =
             R"( .'`,_^"-+:;!><~?iI[]{}1()|\/tfjrnxuvczXYUJCLQ0OZmwqpdkbhao*#MW&8%B@$)";
 
+    /* Functions */
+    [[nodiscard]] __host__ __device__ inline constexpr float degreesToRadians(float degrees)
+    {
+        return degrees * (std::numbers::pi_v<float> / 180.f);
+    }
+
+    template<typename T>
+    [[nodiscard]] __host__ __device__ inline constexpr T clamp(T a, T min, T max)
+    {
+        if (a < min) { return min; }
+        else if (a > max) { return max; }
+        else { return a; }
+    }
+
+    template<typename T>
+    [[nodiscard]] __host__ __device__ inline constexpr T max(T a, T b)
+    {
+        return a < b ? b : a;
+    }
+
+    template<typename T>
+    [[nodiscard]] __host__ __device__ inline constexpr T min(T a, T b)
+    {
+        return a < b ? a : b;
+    }
+
+    /* Classes */
     template<typename T, unsigned int Rows, unsigned int Cols>
     class Matrix
     {
@@ -46,8 +89,12 @@ namespace Custosh
 
         __host__ __device__ Matrix(const std::initializer_list<std::initializer_list<T>>& init)
         {
+            if (init.size() != Rows) { HOST_DEV_ERR(INIT_LIST_ERR_MSG); }
+
             unsigned int i = 0;
             for (const auto& row: init) {
+                if (row.size() != Cols) { HOST_DEV_ERR(INIT_LIST_ERR_MSG); }
+
                 unsigned int j = 0;
                 for (const auto& elem: row) {
                     m_matrix[i][j] = elem;
@@ -57,27 +104,21 @@ namespace Custosh
             }
         }
 
-        __host__ __device__ T& operator()(unsigned int row, unsigned int col)
+        [[nodiscard]] __host__ __device__ T& operator()(unsigned int row, unsigned int col)
         {
+            if (row >= Rows || col >= Cols) { HOST_DEV_ERR(IDX_ERR_MSG); }
+
             return m_matrix[row][col];
         }
 
-        __host__ __device__ const T& operator()(unsigned int row, unsigned int col) const
+        [[nodiscard]] __host__ __device__ const T& operator()(unsigned int row, unsigned int col) const
         {
+            if (row >= Rows || col >= Cols) { HOST_DEV_ERR(IDX_ERR_MSG); }
+
             return m_matrix[row][col];
         }
 
-        [[nodiscard]] __host__ __device__ unsigned int getNRows() const
-        {
-            return Rows;
-        }
-
-        [[nodiscard]] __host__ __device__ unsigned int getNCols() const
-        {
-            return Cols;
-        }
-
-        __host__ __device__ Matrix<T, Rows, Cols> operator*(const T& scalar) const
+        [[nodiscard]] __host__ __device__ Matrix<T, Rows, Cols> operator*(const T& scalar) const
         {
             Matrix<T, Rows, Cols> result;
 
@@ -90,12 +131,12 @@ namespace Custosh
             return result;
         }
 
-        __host__ __device__ friend Matrix<T, Rows, Cols> operator*(const T& scalar, const Matrix& matrix)
+        [[nodiscard]] __host__ __device__ friend Matrix<T, Rows, Cols> operator*(const T& scalar, const Matrix& matrix)
         {
             return matrix * scalar;
         }
 
-        __host__ __device__ Matrix<T, Rows, Cols> operator+(const Matrix<T, Rows, Cols>& other) const
+        [[nodiscard]] __host__ __device__ Matrix<T, Rows, Cols> operator+(const Matrix<T, Rows, Cols>& other) const
         {
             Matrix<T, Rows, Cols> result;
 
@@ -108,13 +149,14 @@ namespace Custosh
             return result;
         }
 
-        __host__ __device__ Matrix<T, Rows, Cols> operator-(const Matrix<T, Rows, Cols>& other) const
+        [[nodiscard]] __host__ __device__ Matrix<T, Rows, Cols> operator-(const Matrix<T, Rows, Cols>& other) const
         {
             return *this + -1 * other;
         }
 
         template<unsigned int OtherCols>
-        __host__ __device__ Matrix<T, Rows, OtherCols> operator*(const Matrix<T, Cols, OtherCols>& other) const
+        [[nodiscard]] __host__ __device__ Matrix<T, Rows, OtherCols>
+        operator*(const Matrix<T, Cols, OtherCols>& other) const
         {
             Matrix<T, Rows, OtherCols> result;
 
@@ -143,6 +185,12 @@ namespace Custosh
             return result;
         }
 
+        [[nodiscard]] __host__ __device__ unsigned int getNRows() const
+        { return Rows; }
+
+        [[nodiscard]] __host__ __device__ unsigned int getNCols() const
+        { return Cols; }
+
     protected:
         T m_matrix[Rows][Cols];
 
@@ -162,6 +210,8 @@ namespace Custosh
 
         __host__ __device__ Vector(const std::initializer_list<T>& init)
         {
+            if (init.size() != Size) { HOST_DEV_ERR(INIT_LIST_ERR_MSG); }
+
             unsigned int i = 0;
             for (const auto& elem: init) {
                 this->m_matrix[i][0] = elem;
@@ -169,13 +219,17 @@ namespace Custosh
             }
         }
 
-        __host__ __device__ T& operator()(unsigned int index)
+        [[nodiscard]] __host__ __device__ T& operator()(unsigned int index)
         {
+            if (index >= Size) { HOST_DEV_ERR(IDX_ERR_MSG); }
+
             return this->m_matrix[index][0];
         }
 
-        __host__ __device__ const T& operator()(unsigned int index) const
+        [[nodiscard]] __host__ __device__ const T& operator()(unsigned int index) const
         {
+            if (index >= Size) { HOST_DEV_ERR(IDX_ERR_MSG); }
+
             return this->m_matrix[index][0];
         }
 
@@ -226,25 +280,17 @@ namespace Custosh
         {
         }
 
-        __host__ __device__ T& x()
-        {
-            return (*this)(0);
-        }
+        [[nodiscard]] __host__ __device__ T& x()
+        { return (*this)(0); }
 
         [[nodiscard]] __host__ __device__ const T& x() const
-        {
-            return (*this)(0);
-        }
+        { return (*this)(0); }
 
-        __host__ __device__ T& y()
-        {
-            return (*this)(1);
-        }
+        [[nodiscard]] __host__ __device__ T& y()
+        { return (*this)(1); }
 
         [[nodiscard]] __host__ __device__ const T& y() const
-        {
-            return (*this)(1);
-        }
+        { return (*this)(1); }
 
     }; // Vector2
 
@@ -268,46 +314,6 @@ namespace Custosh
         {
         }
 
-        __host__ __device__ T& x()
-        {
-            return (*this)(0);
-        }
-
-        [[nodiscard]] __host__ __device__ const T& x() const
-        {
-            return (*this)(0);
-        }
-
-        __host__ __device__ T& y()
-        {
-            return (*this)(1);
-        }
-
-        [[nodiscard]] __host__ __device__ const T& y() const
-        {
-            return (*this)(1);
-        }
-
-        __host__ __device__ T& z()
-        {
-            return (*this)(2);
-        }
-
-        [[nodiscard]] __host__ __device__ const T& z() const
-        {
-            return (*this)(2);
-        }
-
-        __host__ __device__ T& w()
-        {
-            return (*this)(3);
-        }
-
-        [[nodiscard]] __host__ __device__ const T& w() const
-        {
-            return (*this)(3);
-        }
-
         [[nodiscard]] __host__ __device__ Vector4<T> normalizeW() const
         {
             Vector4<T> result;
@@ -319,6 +325,30 @@ namespace Custosh
 
             return result;
         }
+
+        [[nodiscard]] __host__ __device__ T& x()
+        { return (*this)(0); }
+
+        [[nodiscard]] __host__ __device__ const T& x() const
+        { return (*this)(0); }
+
+        [[nodiscard]] __host__ __device__ T& y()
+        { return (*this)(1); }
+
+        [[nodiscard]] __host__ __device__ const T& y() const
+        { return (*this)(1); }
+
+        [[nodiscard]] __host__ __device__ T& z()
+        { return (*this)(2); }
+
+        [[nodiscard]] __host__ __device__ const T& z() const
+        { return (*this)(2); }
+
+        [[nodiscard]] __host__ __device__ T& w()
+        { return (*this)(3); }
+
+        [[nodiscard]] __host__ __device__ const T& w() const
+        { return (*this)(3); }
 
     }; // Vector4
 
@@ -342,36 +372,6 @@ namespace Custosh
         {
         }
 
-        __host__ __device__ T& x()
-        {
-            return (*this)(0);
-        }
-
-        [[nodiscard]] __host__ __device__ const T& x() const
-        {
-            return (*this)(0);
-        }
-
-        __host__ __device__ T& y()
-        {
-            return (*this)(1);
-        }
-
-        [[nodiscard]] __host__ __device__ const T& y() const
-        {
-            return (*this)(1);
-        }
-
-        __host__ __device__ T& z()
-        {
-            return (*this)(2);
-        }
-
-        [[nodiscard]] __host__ __device__ const T& z() const
-        {
-            return (*this)(2);
-        }
-
         [[nodiscard]] __host__ __device__ Vector3<T> cross(const Vector3<T>& other) const
         {
             Vector3<T> result;
@@ -385,8 +385,26 @@ namespace Custosh
 
         [[nodiscard]] __host__ __device__ Vector4<T> toHomogeneous() const
         {
-            return {x(), y(), z(), 1};
+            return {x(), y(), z(), static_cast<T>(1)};
         }
+
+        [[nodiscard]] __host__ __device__ T& x()
+        { return (*this)(0); }
+
+        [[nodiscard]] __host__ __device__ const T& x() const
+        { return (*this)(0); }
+
+        [[nodiscard]] __host__ __device__ T& y()
+        { return (*this)(1); }
+
+        [[nodiscard]] __host__ __device__ const T& y() const
+        { return (*this)(1); }
+
+        [[nodiscard]] __host__ __device__ T& z()
+        { return (*this)(2); }
+
+        [[nodiscard]] __host__ __device__ const T& z() const
+        { return (*this)(2); }
 
     }; // Vector3
 
@@ -504,22 +522,92 @@ namespace Custosh
     }; // PerspectiveProjMatrix
 
     template<typename T>
+    class HostDevPtr
+    {
+    public:
+        __host__ explicit HostDevPtr(unsigned int size) : m_hostPtr(nullptr), m_devPtr(nullptr), m_size(size)
+        {
+            CUDA_CHECK(cudaMallocHost(&m_hostPtr, size * sizeof(T)));
+            CUDA_CHECK(cudaMalloc(&m_devPtr, size * sizeof(T)));
+        }
+
+        __host__ ~HostDevPtr()
+        {
+            if (m_hostPtr) { cudaFreeHost(m_hostPtr); }
+            if (m_devPtr) { cudaFree(m_devPtr); }
+        }
+
+        __host__ __device__ HostDevPtr(const HostDevPtr&) = delete;
+
+        __host__ __device__ HostDevPtr& operator=(const HostDevPtr&) = delete;
+
+        __host__ void resize(unsigned int newSize)
+        {
+            T* oldHostPtr = m_hostPtr;
+            T* oldDevPtr = m_devPtr;
+            unsigned int oldSize = m_size;
+
+            CUDA_CHECK(cudaMallocHost(&m_hostPtr, newSize * sizeof(T)));
+            CUDA_CHECK(cudaMalloc(&m_devPtr, newSize * sizeof(T)));
+            m_size = newSize;
+
+            unsigned int sizeToCopy = min(oldSize, newSize);
+
+            if (oldHostPtr) {
+                CUDA_CHECK(cudaMemcpy(m_hostPtr, oldHostPtr, sizeToCopy * sizeof(T), cudaMemcpyHostToHost));
+                CUDA_CHECK(cudaFreeHost(oldHostPtr));
+            }
+
+            if (oldDevPtr) {
+                CUDA_CHECK(cudaMemcpy(m_devPtr, oldDevPtr, sizeToCopy * sizeof(T), cudaMemcpyDeviceToDevice));
+                CUDA_CHECK(cudaFree(oldDevPtr));
+            }
+        }
+
+        __host__ void loadToDev()
+        {
+            CUDA_CHECK(cudaMemcpy(m_devPtr, m_hostPtr, m_size * sizeof(T), cudaMemcpyHostToDevice));
+        }
+
+        __host__ void loadToHost()
+        {
+            CUDA_CHECK(cudaMemcpy(m_hostPtr, m_devPtr, m_size * sizeof(T), cudaMemcpyDeviceToHost));
+        }
+
+        [[nodiscard]] __host__ T* hostPtr() const
+        { return m_hostPtr; }
+
+        [[nodiscard]] __host__ T* devPtr() const
+        { return m_devPtr; }
+
+        [[nodiscard]] __host__ unsigned int size() const
+        { return m_size; }
+
+    private:
+        T* m_hostPtr;
+        T* m_devPtr;
+        unsigned int m_size;
+
+    }; // HostDevPtr
+
+    template<typename T>
     class HostDevResizableMatrix
     {
     public:
         __host__ HostDevResizableMatrix(unsigned int rows, unsigned int cols)
-                : m_rows(rows),
-                  m_cols(cols),
-                  m_hostArrPtr(new T[rows * cols]),
-                  m_devArrPtr(nullptr)
+                : m_hostPtr(nullptr),
+                  m_devPtr(nullptr),
+                  m_rows(rows),
+                  m_cols(cols)
         {
-            CUDA_CHECK(cudaMalloc(&m_devArrPtr, rows * cols * sizeof(T)));
+            CUDA_CHECK(cudaMallocHost(&m_hostPtr, rows * cols * sizeof(T)));
+            CUDA_CHECK(cudaMalloc(&m_devPtr, rows * cols * sizeof(T)));
         }
 
         __host__ ~HostDevResizableMatrix()
         {
-            delete[] m_hostArrPtr;
-            cudaFree(m_devArrPtr);
+            cudaFreeHost(m_hostPtr);
+            cudaFree(m_devPtr);
         }
 
         __host__ __device__ HostDevResizableMatrix(const HostDevResizableMatrix&) = delete;
@@ -529,11 +617,11 @@ namespace Custosh
         // The data in the matrix gets lost when resizing.
         __host__ void resizeAndClean(unsigned int newRows, unsigned int newCols)
         {
-            delete[] m_hostArrPtr;
-            CUDA_CHECK(cudaFree(m_devArrPtr));
+            CUDA_CHECK(cudaFreeHost(m_hostPtr));
+            CUDA_CHECK(cudaFree(m_devPtr));
 
-            m_hostArrPtr = new T[newRows * newCols];
-            CUDA_CHECK(cudaMalloc(&m_devArrPtr, newRows * newCols * sizeof(T)));
+            CUDA_CHECK(cudaMallocHost(&m_hostPtr, newRows * newCols * sizeof(T)));
+            CUDA_CHECK(cudaMalloc(&m_devPtr, newRows * newCols * sizeof(T)));
 
             m_rows = newRows;
             m_cols = newCols;
@@ -541,77 +629,52 @@ namespace Custosh
 
         __host__ void loadToHost() const
         {
-            CUDA_CHECK(cudaMemcpy(m_hostArrPtr,
-                                  m_devArrPtr,
+            CUDA_CHECK(cudaMemcpy(m_hostPtr,
+                                  m_devPtr,
                                   m_rows * m_cols * sizeof(T),
                                   cudaMemcpyDeviceToHost));
         }
 
         __host__ void loadToDev() const
         {
-            CUDA_CHECK(cudaMemcpy(m_devArrPtr,
-                                  m_hostArrPtr,
+            CUDA_CHECK(cudaMemcpy(m_devPtr,
+                                  m_hostPtr,
                                   m_rows * m_cols * sizeof(T),
                                   cudaMemcpyHostToDevice));
         }
 
-        __host__ const T* devData() const
+        [[nodiscard]] __host__ T& operator()(unsigned int row, unsigned int col)
         {
-            return m_devArrPtr;
-        }
-
-        __host__ T* devData()
-        {
-            return m_devArrPtr;
-        }
-
-        __host__ __device__ T& operator()(unsigned int row, unsigned int col)
-        {
-#ifdef __CUDA_ARCH__
             if (row >= m_rows || col >= m_cols) {
-                printf("Index out of bounds: row = %u, col = %u\n", row, col);
-                asm("trap;");
+                throw CustoshException(IDX_ERR_MSG);
             }
-            return m_devArrPtr[m_cols * row + col];
-#else
-            if (row >= m_rows || col >= m_cols) {
-                throw CustoshException("Index out of bounds");
-            }
-            return m_hostArrPtr[m_cols * row + col];
-#endif
+
+            return m_hostPtr[m_cols * row + col];
         }
 
-        __host__ __device__ const T& operator()(unsigned int row, unsigned int col) const
+        [[nodiscard]] __host__ const T& operator()(unsigned int row, unsigned int col) const
         {
-#ifdef __CUDA_ARCH__
             if (row >= m_rows || col >= m_cols) {
-                printf("Index out of bounds: row = %u, col = %u\n", row, col);
-                asm("trap;");
+                throw CustoshException(IDX_ERR_MSG);
             }
-            return m_devArrPtr[m_cols * row + col];
-#else
-            if (row >= m_rows || col >= m_cols) {
-                throw CustoshException("Index out of bounds");
-            }
-            return m_hostArrPtr[m_cols * row + col];
-#endif
+
+            return m_hostPtr[m_cols * row + col];
         }
 
-        [[nodiscard]] __host__ __device__ unsigned int getNRows() const
-        {
-            return m_rows;
-        }
+        [[nodiscard]] __host__ T* devPtr()
+        { return m_devPtr; }
 
-        [[nodiscard]] __host__ __device__ unsigned int getNCols() const
-        {
-            return m_cols;
-        }
+        [[nodiscard]] __host__ unsigned int getNRows() const
+        { return m_rows; }
 
-    protected:
+        [[nodiscard]] __host__ unsigned int getNCols() const
+        { return m_cols; }
+
+    private:
+        T* m_hostPtr;
+        T* m_devPtr;
         unsigned int m_rows;
         unsigned int m_cols;
-        T* m_hostArrPtr;
-        T* m_devArrPtr;
 
     }; // HostDevResizableMatrix
 
@@ -627,7 +690,7 @@ namespace Custosh
         {
             std::string buffer;
 
-            for (unsigned int j = 0; j < m_cols; ++j) {
+            for (unsigned int j = 0; j < getNCols(); ++j) {
                 buffer += brightnessToASCII((*this)(row, j));
             }
 
@@ -658,32 +721,23 @@ namespace Custosh
         {
         }
 
-        [[nodiscard]] __host__ __device__ T getRealPart() const
-        {
-            return m_realPart;
-        }
-
-        [[nodiscard]] __host__ __device__ Vector3<T> getImaginaryVec() const
-        {
-            return m_imaginaryVec;
-        }
-
-        __host__ __device__ Quaternion<T> operator*(const T& scalar) const
+        [[nodiscard]] __host__ __device__ Quaternion<T> operator*(const T& scalar) const
         {
             return {scalar * m_realPart, Vector3<T>(scalar * m_imaginaryVec)};
         }
 
-        __host__ __device__ friend Quaternion<T> operator*(const T& scalar, const Quaternion<T>& quaternion)
+        [[nodiscard]] __host__ __device__ friend Quaternion<T>
+        operator*(const T& scalar, const Quaternion<T>& quaternion)
         {
             return quaternion * scalar;
         }
 
-        __host__ __device__ Quaternion<T> operator+(const Quaternion& other) const
+        [[nodiscard]] __host__ __device__ Quaternion<T> operator+(const Quaternion& other) const
         {
             return {m_realPart + other.m_realPart, m_imaginaryVec + other.m_imaginaryVec};
         }
 
-        __host__ __device__ Quaternion<T> operator*(const Quaternion& other) const
+        [[nodiscard]] __host__ __device__ Quaternion<T> operator*(const Quaternion& other) const
         {
             return {m_realPart * other.m_realPart - m_imaginaryVec.dot(other.m_imaginaryVec),
                     Vector3<float>(m_realPart * other.m_imaginaryVec +
@@ -701,12 +755,19 @@ namespace Custosh
             return m_realPart * m_realPart + m_imaginaryVec.normSq();
         }
 
+        [[nodiscard]] __host__ __device__ T realPart() const
+        { return m_realPart; }
+
+        [[nodiscard]] __host__ __device__ Vector3<T> imaginaryVec() const
+        { return m_imaginaryVec; }
+
     private:
         T m_realPart;
         Vector3<T> m_imaginaryVec;
 
     }; // Quaternion
 
+    /* Structs */
     struct triangle3D_t
     {
         Vector3<float> p0;
@@ -811,25 +872,6 @@ namespace Custosh
         {
         }
     };
-
-    __host__ __device__ inline float degreesToRadians(float degrees)
-    {
-        return degrees * (std::numbers::pi_v<float> / 180.f);
-    }
-
-    template<typename T>
-    __host__ __device__ inline T clamp(T a, T min, T max)
-    {
-        if (a < min) { return min; }
-        else if (a > max) { return max; }
-        else { return a; }
-    }
-
-    template<typename T>
-    __host__ __device__ inline T max(T a, T b)
-    {
-        return a < b ? b : a;
-    }
 
 } // Custosh
 

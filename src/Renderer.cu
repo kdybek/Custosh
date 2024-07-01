@@ -3,8 +3,6 @@
 #include <cmath>
 #include <algorithm>
 
-#include "TriangleRegistry.cuh"
-
 namespace Custosh::Renderer
 {
     namespace

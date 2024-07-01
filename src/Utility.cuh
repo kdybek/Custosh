@@ -817,6 +817,20 @@ namespace Custosh
         return degrees * (std::numbers::pi_v<float> / 180.f);
     }
 
+    template<typename T>
+    __host__ __device__ inline T clamp(T a, T min, T max)
+    {
+        if (a < min) { return min; }
+        else if (a > max) { return max; }
+        else { return a; }
+    }
+
+    template<typename T>
+    __host__ __device__ inline T max(T a, T b)
+    {
+        return a < b ? b : a;
+    }
+
 } // Custosh
 
 

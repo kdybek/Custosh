@@ -95,20 +95,6 @@ namespace Custosh::Renderer
                     triangle3D.p0.z() * bc.alpha + triangle3D.p1.z() * bc.beta + triangle3D.p2.z() * bc.gamma};
         }
 
-        template<typename T>
-        __device__ T clamp(T a, T min, T max)
-        {
-            if (a < min) { return min; }
-            else if (a > max) { return max; }
-            else { return a; }
-        }
-
-        template<typename T>
-        __device__ T max(T a, T b)
-        {
-            return a < b ? b : a;
-        }
-
         __device__ float distanceSq(const Vector3<float>& a, const Vector3<float>& b)
         {
             return static_cast<float>(pow((a.x() - b.x()), 2) + pow((a.y() - b.y()), 2) + pow((a.z() - b.z()), 2));
@@ -205,12 +191,14 @@ namespace Custosh::Renderer
     }
 
     __global__ void getBrightnessMap(const pixel_t* screen,
-                                     const unsigned int rows,
-                                     const unsigned int cols,
+                                     unsigned int rows,
+                                     unsigned int cols,
                                      lightSource_t ls,
                                      float* bMap)
     {
         unsigned int i = threadIdx.x;
+
+        if (i >= rows) { return; }
 
         for (unsigned int j = 0; j < cols; ++j) {
             const pixel_t& screenPoint = screen[i * cols + j];

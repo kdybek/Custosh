@@ -18,8 +18,8 @@ namespace Custosh::Renderer
                            const PerspectiveProjMatrix& ppm);
 
     __global__ void getBrightnessMap(const pixel_t* screen,
-                                     const unsigned int rows,
-                                     const unsigned int cols,
+                                     unsigned int rows,
+                                     unsigned int cols,
                                      lightSource_t ls,
                                      float* bMap);
 

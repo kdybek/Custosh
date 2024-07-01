@@ -67,7 +67,7 @@ int main()
     WindowsConsoleScreenBuffer buf1;
     WindowsConsoleScreenBuffer buf2;
 
-    BrightnessMap bMap(70, 70);
+    HostDevPtr<char> characters(70 * 70);
 
     while (true) {
         auto start = std::chrono::high_resolution_clock::now();
@@ -78,11 +78,11 @@ int main()
 
         Renderer::rasterizeModel(cube, screen, ppm);
         screen.loadToDev();
-        Renderer::getBrightnessMap<<<1, 70>>>(screen.devPtr(), screen.getNRows(), screen.getNCols(), ls, bMap.devPtr());
+        Renderer::computeFragments<<<1, 70>>>(screen.devPtr(), screen.getNRows(), screen.getNCols(), ls, characters.devPtr());
         cudaDeviceSynchronize();
-        bMap.loadToHost();
+        characters.loadToHost();
 
-        buf1.draw(bMap);
+        buf1.draw(characters.hostPtr(), 70, 70);
         buf1.activate();
         Renderer::clearScreen(screen);
 

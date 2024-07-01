@@ -36,14 +36,12 @@ namespace Custosh
 
         WindowsConsoleScreenBuffer& operator=(const WindowsConsoleScreenBuffer&) = delete;
 
-        void draw(const BrightnessMap& bm)
+        void draw(const char* ptr, unsigned int rows, unsigned int cols)
         {
-            for (unsigned int i = 0; i < bm.getNRows(); ++i) {
-                std::string terminalOutput = bm.rowToString(i);
-
+            for (unsigned int i = 0; i < rows; ++i) {
                 DWORD charsWritten;
-                COORD coord = {0, static_cast<SHORT>(bm.getNRows() - i - 1)};
-                WriteConsoleOutputCharacter(m_handle, terminalOutput.c_str(), terminalOutput.size(), coord, &charsWritten);
+                COORD coord = {0, static_cast<SHORT>(rows - i - 1)};
+                WriteConsoleOutputCharacter(m_handle, ptr + i * cols, cols, coord, &charsWritten);
             }
         }
 

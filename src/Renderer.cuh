@@ -17,11 +17,11 @@ namespace Custosh::Renderer
                            HostDevResizableMatrix<pixel_t>& screen,
                            const PerspectiveProjMatrix& ppm);
 
-    __global__ void getBrightnessMap(const pixel_t* screen,
+    __global__ void computeFragments(const pixel_t* screen,
                                      unsigned int rows,
                                      unsigned int cols,
                                      lightSource_t ls,
-                                     float* bMap);
+                                     char* characters);
 
 } // Custosh::Renderer
 

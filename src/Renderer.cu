@@ -1,12 +1,18 @@
 #include "Renderer.cuh"
 
-#include <cmath>
-#include <algorithm>
-
 namespace Custosh::Renderer
 {
     namespace
     {
+        __constant__ const char* ASCIIByBrightness =
+                R"( .'`,_^"-+:;!><~?iI[]{}1()|\/tfjrnxuvczXYUJCLQ0OZmwqpdkbhao*#MW&8%B@$)";
+
+        __device__ char brightnessToASCII(float brightness)
+        {
+            unsigned int idx = ceil(brightness * static_cast<float>(stringLength(ASCIIByBrightness) - 1));
+            return ASCIIByBrightness[idx];
+        }
+
         template<typename T>
         boundingBox_t findBounds(const triangle2D_t& triangle2D,
                                  const HostDevResizableMatrix<T>& screen)
@@ -188,11 +194,11 @@ namespace Custosh::Renderer
         }
     }
 
-    __global__ void getBrightnessMap(const pixel_t* screen,
+    __global__ void computeFragments(const pixel_t* screen,
                                      unsigned int rows,
                                      unsigned int cols,
                                      lightSource_t ls,
-                                     float* bMap)
+                                     char* characters)
     {
         unsigned int i = threadIdx.x;
 
@@ -202,9 +208,9 @@ namespace Custosh::Renderer
             const pixel_t& screenPoint = screen[i * cols + j];
 
             if (screenPoint.occupied) {
-                bMap[i * cols + j] = getPointBrightness(screenPoint, ls);
+                characters[i * cols + j] = brightnessToASCII(getPointBrightness(screenPoint, ls));
             }
-            else { bMap[i * cols + j] = 0.f; }
+            else { characters[i * cols + j] = brightnessToASCII(0.f); }
         }
     }
 

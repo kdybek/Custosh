@@ -55,24 +55,21 @@ namespace Custosh
         return degrees * (std::numbers::pi_v<float> / 180.f);
     }
 
+    [[nodiscard]] __host__ __device__ inline constexpr unsigned int stringLength(const char* str)
+    {
+        unsigned int count = 0;
+
+        for (unsigned int i = 0; str[i] != '\0'; ++i) { ++count; }
+
+        return count;
+    }
+
     template<typename T>
     [[nodiscard]] __host__ __device__ inline constexpr T clamp(T a, T min, T max)
     {
         if (a < min) { return min; }
         else if (a > max) { return max; }
         else { return a; }
-    }
-
-    template<typename T>
-    [[nodiscard]] __host__ __device__ inline constexpr T max(T a, T b)
-    {
-        return a < b ? b : a;
-    }
-
-    template<typename T>
-    [[nodiscard]] __host__ __device__ inline constexpr T min(T a, T b)
-    {
-        return a < b ? a : b;
     }
 
     /* Classes */
@@ -553,7 +550,7 @@ namespace Custosh
             CUDA_CHECK(cudaMalloc(&m_devPtr, newSize * sizeof(T)));
             m_size = newSize;
 
-            unsigned int sizeToCopy = min(oldSize, newSize);
+            unsigned int sizeToCopy = std::min(oldSize, newSize);
 
             if (oldHostPtr) {
                 CUDA_CHECK(cudaMemcpy(m_hostPtr, oldHostPtr, sizeToCopy * sizeof(T), cudaMemcpyHostToHost));
@@ -593,7 +590,7 @@ namespace Custosh
     }; // HostDevPtr
 
     template<typename T>
-    class HostDevArray : private HostDevPtr<T>
+    class HostDevArray : public HostDevPtr<T>
     {
     public:
         __host__ explicit HostDevArray(unsigned int size) : HostDevPtr<T>(size)
@@ -614,19 +611,13 @@ namespace Custosh
             return this->hostPtr()[idx];
         }
 
-        using HostDevPtr<T>::loadToDev;
-        using HostDevPtr<T>::loadToHost;
-        using HostDevPtr<T>::hostPtr;
-        using HostDevPtr<T>::devPtr;
-        using HostDevPtr<T>::size;
-
     }; // HostDevArray
 
     template<typename T>
     class HostDevDynamicArray : private HostDevPtr<T>
     {
     public:
-        __host__ explicit HostDevDynamicArray() : m_afterLastIdx(0), HostDevPtr<T>(DARR_BASE_SIZE)
+        __host__ HostDevDynamicArray() : m_afterLastIdx(0), HostDevPtr<T>(DARR_BASE_SIZE)
         {
         }
 

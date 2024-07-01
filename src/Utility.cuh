@@ -41,6 +41,8 @@ do { \
 #define INIT_LIST_ERR_MSG "incorrect initializer list"
 #define IDX_ERR_MSG "index out of bounds"
 
+#define DARR_BASE_SIZE 8
+
 namespace Custosh
 {
     /* Constants */
@@ -185,10 +187,10 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] __host__ __device__ unsigned int getNRows() const
+        [[nodiscard]] __host__ __device__ unsigned int nRows() const
         { return Rows; }
 
-        [[nodiscard]] __host__ __device__ unsigned int getNCols() const
+        [[nodiscard]] __host__ __device__ unsigned int nCols() const
         { return Cols; }
 
     protected:
@@ -219,18 +221,18 @@ namespace Custosh
             }
         }
 
-        [[nodiscard]] __host__ __device__ T& operator()(unsigned int index)
+        [[nodiscard]] __host__ __device__ T& operator()(unsigned int idx)
         {
-            if (index >= Size) { HOST_DEV_ERR(IDX_ERR_MSG); }
+            if (idx >= Size) { HOST_DEV_ERR(IDX_ERR_MSG); }
 
-            return this->m_matrix[index][0];
+            return this->m_matrix[idx][0];
         }
 
-        [[nodiscard]] __host__ __device__ const T& operator()(unsigned int index) const
+        [[nodiscard]] __host__ __device__ const T& operator()(unsigned int idx) const
         {
-            if (index >= Size) { HOST_DEV_ERR(IDX_ERR_MSG); }
+            if (idx >= Size) { HOST_DEV_ERR(IDX_ERR_MSG); }
 
-            return this->m_matrix[index][0];
+            return this->m_matrix[idx][0];
         }
 
         [[nodiscard]] __host__ __device__ T dot(const Vector<T, Size>& other) const
@@ -589,6 +591,76 @@ namespace Custosh
         unsigned int m_size;
 
     }; // HostDevPtr
+
+    template<typename T>
+    class HostDevArray : private HostDevPtr<T>
+    {
+    public:
+        __host__ explicit HostDevArray(unsigned int size) : HostDevPtr<T>(size)
+        {
+        }
+
+        T& operator()(unsigned int idx)
+        {
+            if (idx >= this->size()) { throw CustoshException(IDX_ERR_MSG); }
+
+            return this->hostPtr()[idx];
+        }
+
+        const T& operator()(unsigned int idx) const
+        {
+            if (idx >= this->size()) { throw CustoshException(IDX_ERR_MSG); }
+
+            return this->hostPtr()[idx];
+        }
+
+        using HostDevPtr<T>::loadToDev;
+        using HostDevPtr<T>::loadToHost;
+        using HostDevPtr<T>::hostPtr;
+        using HostDevPtr<T>::devPtr;
+        using HostDevPtr<T>::size;
+
+    }; // HostDevArray
+
+    template<typename T>
+    class HostDevDynamicArray : private HostDevPtr<T>
+    {
+    public:
+        __host__ explicit HostDevDynamicArray() : m_afterLastIdx(0), HostDevPtr<T>(DARR_BASE_SIZE)
+        {
+        }
+
+        T& operator()(unsigned int idx)
+        {
+            if (idx >= m_afterLastIdx) { throw CustoshException(IDX_ERR_MSG); }
+
+            return this->hostPtr()[idx];
+        }
+
+        const T& operator()(unsigned int idx) const
+        {
+            if (idx >= m_afterLastIdx) { throw CustoshException(IDX_ERR_MSG); }
+
+            return this->hostPtr()[idx];
+        }
+
+        void pushBack(const T& t)
+        {
+            if (m_afterLastIdx == this->size()) { this->resize(this->size() * 2); }
+
+            (*this)[m_afterLastIdx] = t;
+        }
+
+        using HostDevPtr<T>::loadToDev;
+        using HostDevPtr<T>::loadToHost;
+        using HostDevPtr<T>::hostPtr;
+        using HostDevPtr<T>::devPtr;
+        using HostDevPtr<T>::size;
+
+    private:
+        unsigned int m_afterLastIdx;
+
+    }; // HostDevDynamicArray
 
     template<typename T>
     class HostDevResizableMatrix

@@ -76,6 +76,6 @@ int main()
 
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long) 0, 10000 - elapsed.count())));
+        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long) 0, 30 - elapsed.count())));
     }
 }

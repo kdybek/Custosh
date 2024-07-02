@@ -268,7 +268,7 @@ namespace Custosh::Renderer
                                         fragment_t* fragmentPtr)
         {
             const unsigned int x = threadIdx.x;
-            const unsigned int y = threadIdx.y;
+            const unsigned int y = blockIdx.x;
 
             if (x >= rows || y >= cols) { return; }
 
@@ -308,7 +308,7 @@ namespace Custosh::Renderer
                                         char* characters)
         {
             const unsigned int x = threadIdx.x;
-            const unsigned int y = threadIdx.y;
+            const unsigned int y = blockIdx.x;
 
             if (x >= rows || y >= cols) { return; }
 
@@ -363,34 +363,27 @@ namespace Custosh::Renderer
         CUDA_CHECK(cudaDeviceSynchronize());
 
         unsigned int threadsPerBlockFShader = std::min(g_hostScreenRows * g_hostScreenCols, maxThreadsPerBlock);
-        unsigned int numBlocksFShader = (g_hostScreenRows * g_hostScreenCols + threadsPerBlockFShader - 1) / threadsPerBlockFShader;
+        unsigned int numBlocksFShader =
+                (g_hostScreenRows * g_hostScreenCols + threadsPerBlockFShader - 1) / threadsPerBlockFShader;
 
-        fragmentShader1<<<numBlocksFShader, threadsPerBlockFShader>>>(g_hostScreenRows,
-                                                                      g_hostScreenCols,
-                                                                      indexPtr,
-                                                                      numTriangles,
-                                                                      g_hostVertex2DDevPtr.devPtr(),
-                                                                      vertex3DPtr,
-                                                                      g_hostTriangleCross2DDevPtr.devPtr(),
-                                                                      g_hostTriangleNormalDevPtr.devPtr(),
-                                                                      g_hostBoundingBoxDevPtr.devPtr(),
-                                                                      g_hostFragmentDevPtr.devPtr());
+        fragmentShader1<<<70, 70>>>(g_hostScreenRows,
+                                    g_hostScreenCols,
+                                    indexPtr,
+                                    numTriangles,
+                                    g_hostVertex2DDevPtr.devPtr(),
+                                    vertex3DPtr,
+                                    g_hostTriangleCross2DDevPtr.devPtr(),
+                                    g_hostTriangleNormalDevPtr.devPtr(),
+                                    g_hostBoundingBoxDevPtr.devPtr(),
+                                    g_hostFragmentDevPtr.devPtr());
         CUDA_CHECK(cudaGetLastError());
         CUDA_CHECK(cudaDeviceSynchronize());
 
-        g_hostFragmentDevPtr.loadToHost();
-        std::cout << g_hostFragmentDevPtr.hostPtr()[35 * 70 + 35].occupied << '\n';
-        std::cout << g_hostFragmentDevPtr.hostPtr()[35 * 70 + 35].coords.x() << '\n';
-        std::cout << g_hostFragmentDevPtr.hostPtr()[35 * 70 + 35].coords.y() << '\n';
-        std::cout << g_hostFragmentDevPtr.hostPtr()[35 * 70 + 35].coords.z() << '\n';
-
-        return;
-
-        fragmentShader2<<<numBlocksFShader, threadsPerBlockFShader>>>(g_hostFragmentDevPtr.devPtr(),
-                                                                      g_hostScreenRows,
-                                                                      g_hostScreenCols,
-                                                                      ls,
-                                                                      g_hostCharPtr.devPtr());
+        fragmentShader2<<<70, 70>>>(g_hostFragmentDevPtr.devPtr(),
+                                    g_hostScreenRows,
+                                    g_hostScreenCols,
+                                    ls,
+                                    g_hostCharPtr.devPtr());
         CUDA_CHECK(cudaGetLastError());
         g_hostCharPtr.loadToHost();
         g_hostInactiveBuf.draw(g_hostCharPtr.hostPtr(), g_hostScreenRows, g_hostScreenCols);

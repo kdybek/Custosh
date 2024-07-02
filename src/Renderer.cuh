@@ -2,26 +2,13 @@
 #define CUSTOSH_RENDERER_CUH
 
 
-#include "Utility.cuh"
 #include "Mesh.h"
 
 namespace Custosh::Renderer
 {
-    void clearScreen(HostDevResizableMatrix<pixel_t>& screen);
+        __host__ void drawMesh(const Mesh& mesh, const PerspectiveProjMatrix& ppm, const lightSource_t& ls);
 
-    void rasterizeModel(const Mesh& mesh,
-                        HostDevResizableMatrix<pixel_t>& screen,
-                        const PerspectiveProjMatrix& ppm);
-
-    void rasterizeTriangle(triangle3D_t triangle3D,
-                           HostDevResizableMatrix<pixel_t>& screen,
-                           const PerspectiveProjMatrix& ppm);
-
-    __global__ void computeFragments(const pixel_t* screen,
-                                     unsigned int rows,
-                                     unsigned int cols,
-                                     lightSource_t ls,
-                                     char* characters);
+        // TODO: void set rows and cols function
 
 } // Custosh::Renderer
 

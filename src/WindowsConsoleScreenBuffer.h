@@ -3,6 +3,7 @@
 
 
 #define NOMINMAX
+
 #include <windows.h>
 
 #include "CustoshExcept.h"
@@ -10,7 +11,6 @@
 
 namespace Custosh
 {
-
     class WindowsConsoleScreenBuffer
     {
     public:
@@ -35,6 +35,20 @@ namespace Custosh
         WindowsConsoleScreenBuffer(const WindowsConsoleScreenBuffer&) = delete;
 
         WindowsConsoleScreenBuffer& operator=(const WindowsConsoleScreenBuffer&) = delete;
+
+        WindowsConsoleScreenBuffer(WindowsConsoleScreenBuffer&& other) noexcept
+                : m_handle(std::exchange(other.m_handle, INVALID_HANDLE_VALUE))
+        {
+        }
+
+        WindowsConsoleScreenBuffer& operator=(WindowsConsoleScreenBuffer&& other) noexcept
+        {
+            if (this != &other) {
+                CloseHandle(m_handle);
+                m_handle = std::exchange(other.m_handle, INVALID_HANDLE_VALUE);
+            }
+            return *this;
+        }
 
         void draw(const char* ptr, unsigned int rows, unsigned int cols)
         {

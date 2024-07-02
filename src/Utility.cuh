@@ -43,29 +43,22 @@ do { \
 
 #define DARR_BASE_SIZE 8
 
+#define HOST_DEV_AUX_FUNC [[nodiscard]] __host__ __device__ inline constexpr
+
 namespace Custosh
 {
     /* Constants */
-    inline const std::string ASCIIByBrightness =
+    inline const std::string g_devASCIIByBrightness =
             R"( .'`,_^"-+:;!><~?iI[]{}1()|\/tfjrnxuvczXYUJCLQ0OZmwqpdkbhao*#MW&8%B@$)";
 
     /* Functions */
-    [[nodiscard]] __host__ __device__ inline constexpr float degreesToRadians(float degrees)
+    HOST_DEV_AUX_FUNC float degreesToRadians(float degrees)
     {
         return degrees * (std::numbers::pi_v<float> / 180.f);
     }
 
-    [[nodiscard]] __host__ __device__ inline constexpr unsigned int stringLength(const char* str)
-    {
-        unsigned int count = 0;
-
-        for (unsigned int i = 0; str[i] != '\0'; ++i) { ++count; }
-
-        return count;
-    }
-
     template<typename T>
-    [[nodiscard]] __host__ __device__ inline constexpr T clamp(T a, T min, T max)
+    HOST_DEV_AUX_FUNC T clamp(T a, T min, T max)
     {
         if (a < min) { return min; }
         else if (a > max) { return max; }
@@ -184,10 +177,10 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] __host__ __device__ unsigned int nRows() const
+        [[nodiscard]] __host__ __device__ unsigned int numRows() const
         { return Rows; }
 
-        [[nodiscard]] __host__ __device__ unsigned int nCols() const
+        [[nodiscard]] __host__ __device__ unsigned int numCols() const
         { return Cols; }
 
     protected:
@@ -521,6 +514,62 @@ namespace Custosh
     }; // PerspectiveProjMatrix
 
     template<typename T>
+    class DevPtr
+    {
+    public:
+        __host__ explicit DevPtr(unsigned int size) : m_devPtr(nullptr), m_size(size)
+        {
+            CUDA_CHECK(cudaMalloc(&m_devPtr, size * sizeof(T)));
+        }
+
+        __host__ virtual ~DevPtr()
+        {
+            if (m_devPtr) { cudaFree(m_devPtr); }
+        }
+
+        __host__ __device__ DevPtr(const DevPtr&) = delete;
+
+        __host__ __device__ DevPtr& operator=(const DevPtr&) = delete;
+
+        // TODO: move constructor and move assignment operator
+
+        __host__ void resizeAndDiscardData(unsigned int newSize)
+        {
+            if (m_devPtr) { CUDA_CHECK(cudaFree(m_devPtr)); }
+
+            CUDA_CHECK(cudaMalloc(&m_devPtr, newSize * sizeof(T)));
+            m_size = newSize;
+        }
+
+        __host__ void resizeAndCopy(unsigned int newSize)
+        {
+            T* oldDevPtr = m_devPtr;
+            unsigned int oldSize = m_size;
+
+            CUDA_CHECK(cudaMalloc(&m_devPtr, newSize * sizeof(T)));
+            m_size = newSize;
+
+            unsigned int sizeToCopy = std::min(oldSize, newSize);
+
+            if (oldDevPtr) {
+                CUDA_CHECK(cudaMemcpy(m_devPtr, oldDevPtr, sizeToCopy * sizeof(T), cudaMemcpyDeviceToDevice));
+                CUDA_CHECK(cudaFree(oldDevPtr));
+            }
+        }
+
+        [[nodiscard]] __host__ T* get() const
+        { return m_devPtr; }
+
+        [[nodiscard]] __host__ unsigned int size() const
+        { return m_size; }
+
+    private:
+        T* m_devPtr;
+        unsigned int m_size;
+
+    }; // DevPtr
+
+    template<typename T>
     class HostDevPtr
     {
     public:
@@ -530,7 +579,7 @@ namespace Custosh
             CUDA_CHECK(cudaMalloc(&m_devPtr, size * sizeof(T)));
         }
 
-        __host__ ~HostDevPtr()
+        __host__ virtual ~HostDevPtr()
         {
             if (m_hostPtr) { cudaFreeHost(m_hostPtr); }
             if (m_devPtr) { cudaFree(m_devPtr); }
@@ -540,7 +589,19 @@ namespace Custosh
 
         __host__ __device__ HostDevPtr& operator=(const HostDevPtr&) = delete;
 
-        __host__ void resize(unsigned int newSize)
+        // TODO: move constructor and move assignment operator
+
+        __host__ void resizeAndDiscardData(unsigned int newSize)
+        {
+            if (m_hostPtr) { CUDA_CHECK(cudaFreeHost(m_hostPtr)); }
+            if (m_devPtr) { CUDA_CHECK(cudaFree(m_devPtr)); }
+
+            CUDA_CHECK(cudaMallocHost(&m_hostPtr, newSize * sizeof(T)));
+            CUDA_CHECK(cudaMalloc(&m_devPtr, newSize * sizeof(T)));
+            m_size = newSize;
+        }
+
+        __host__ void resizeAndCopy(unsigned int newSize)
         {
             T* oldHostPtr = m_hostPtr;
             T* oldDevPtr = m_devPtr;
@@ -563,12 +624,12 @@ namespace Custosh
             }
         }
 
-        __host__ void loadToDev()
+        __host__ void loadToDev() const
         {
             CUDA_CHECK(cudaMemcpy(m_devPtr, m_hostPtr, m_size * sizeof(T), cudaMemcpyHostToDevice));
         }
 
-        __host__ void loadToHost()
+        __host__ void loadToHost() const
         {
             CUDA_CHECK(cudaMemcpy(m_hostPtr, m_devPtr, m_size * sizeof(T), cudaMemcpyDeviceToHost));
         }
@@ -590,30 +651,6 @@ namespace Custosh
     }; // HostDevPtr
 
     template<typename T>
-    class HostDevArray : public HostDevPtr<T>
-    {
-    public:
-        __host__ explicit HostDevArray(unsigned int size) : HostDevPtr<T>(size)
-        {
-        }
-
-        T& operator()(unsigned int idx)
-        {
-            if (idx >= this->size()) { throw CustoshException(IDX_ERR_MSG); }
-
-            return this->hostPtr()[idx];
-        }
-
-        const T& operator()(unsigned int idx) const
-        {
-            if (idx >= this->size()) { throw CustoshException(IDX_ERR_MSG); }
-
-            return this->hostPtr()[idx];
-        }
-
-    }; // HostDevArray
-
-    template<typename T>
     class HostDevDynamicArray : private HostDevPtr<T>
     {
     public:
@@ -621,23 +658,9 @@ namespace Custosh
         {
         }
 
-        T& operator()(unsigned int idx)
-        {
-            if (idx >= m_afterLastIdx) { throw CustoshException(IDX_ERR_MSG); }
-
-            return this->hostPtr()[idx];
-        }
-
-        const T& operator()(unsigned int idx) const
-        {
-            if (idx >= m_afterLastIdx) { throw CustoshException(IDX_ERR_MSG); }
-
-            return this->hostPtr()[idx];
-        }
-
         void pushBack(const T& t)
         {
-            if (m_afterLastIdx == this->size()) { this->resize(this->size() * 2); }
+            if (m_afterLastIdx == this->size()) { this->resizeAndCopy(this->size() * 2); }
 
             (*this)[m_afterLastIdx] = t;
         }
@@ -652,122 +675,6 @@ namespace Custosh
         unsigned int m_afterLastIdx;
 
     }; // HostDevDynamicArray
-
-    template<typename T>
-    class HostDevResizableMatrix
-    {
-    public:
-        __host__ HostDevResizableMatrix(unsigned int rows, unsigned int cols)
-                : m_hostPtr(nullptr),
-                  m_devPtr(nullptr),
-                  m_rows(rows),
-                  m_cols(cols)
-        {
-            CUDA_CHECK(cudaMallocHost(&m_hostPtr, rows * cols * sizeof(T)));
-            CUDA_CHECK(cudaMalloc(&m_devPtr, rows * cols * sizeof(T)));
-        }
-
-        __host__ ~HostDevResizableMatrix()
-        {
-            cudaFreeHost(m_hostPtr);
-            cudaFree(m_devPtr);
-        }
-
-        __host__ __device__ HostDevResizableMatrix(const HostDevResizableMatrix&) = delete;
-
-        __host__ __device__ HostDevResizableMatrix& operator=(const HostDevResizableMatrix&) = delete;
-
-        // The data in the matrix gets lost when resizing.
-        __host__ void resizeAndClean(unsigned int newRows, unsigned int newCols)
-        {
-            CUDA_CHECK(cudaFreeHost(m_hostPtr));
-            CUDA_CHECK(cudaFree(m_devPtr));
-
-            CUDA_CHECK(cudaMallocHost(&m_hostPtr, newRows * newCols * sizeof(T)));
-            CUDA_CHECK(cudaMalloc(&m_devPtr, newRows * newCols * sizeof(T)));
-
-            m_rows = newRows;
-            m_cols = newCols;
-        }
-
-        __host__ void loadToHost() const
-        {
-            CUDA_CHECK(cudaMemcpy(m_hostPtr,
-                                  m_devPtr,
-                                  m_rows * m_cols * sizeof(T),
-                                  cudaMemcpyDeviceToHost));
-        }
-
-        __host__ void loadToDev() const
-        {
-            CUDA_CHECK(cudaMemcpy(m_devPtr,
-                                  m_hostPtr,
-                                  m_rows * m_cols * sizeof(T),
-                                  cudaMemcpyHostToDevice));
-        }
-
-        [[nodiscard]] __host__ T& operator()(unsigned int row, unsigned int col)
-        {
-            if (row >= m_rows || col >= m_cols) {
-                throw CustoshException(IDX_ERR_MSG);
-            }
-
-            return m_hostPtr[m_cols * row + col];
-        }
-
-        [[nodiscard]] __host__ const T& operator()(unsigned int row, unsigned int col) const
-        {
-            if (row >= m_rows || col >= m_cols) {
-                throw CustoshException(IDX_ERR_MSG);
-            }
-
-            return m_hostPtr[m_cols * row + col];
-        }
-
-        [[nodiscard]] __host__ T* devPtr()
-        { return m_devPtr; }
-
-        [[nodiscard]] __host__ unsigned int getNRows() const
-        { return m_rows; }
-
-        [[nodiscard]] __host__ unsigned int getNCols() const
-        { return m_cols; }
-
-    private:
-        T* m_hostPtr;
-        T* m_devPtr;
-        unsigned int m_rows;
-        unsigned int m_cols;
-
-    }; // HostDevResizableMatrix
-
-    class BrightnessMap : public HostDevResizableMatrix<float>
-    {
-    public:
-        __host__ BrightnessMap(unsigned int rows, unsigned int cols)
-                : HostDevResizableMatrix<float>(rows, cols)
-        {
-        }
-
-        [[nodiscard]] __host__ std::string rowToString(unsigned int row) const
-        {
-            std::string buffer;
-
-            for (unsigned int j = 0; j < getNCols(); ++j) {
-                buffer += brightnessToASCII((*this)(row, j));
-            }
-
-            return buffer;
-        }
-
-    private:
-        __host__ static char brightnessToASCII(float brightness)
-        {
-            unsigned int idx = std::ceil(brightness * static_cast<float>(ASCIIByBrightness.size() - 1));
-            return ASCIIByBrightness.at(idx);
-        }
-
-    }; // BrightnessMap
 
     template<typename T>
     class Quaternion
@@ -908,13 +815,13 @@ namespace Custosh
         }
     };
 
-    struct pixel_t
+    struct fragment_t
     {
         bool occupied;
         Vector3<float> coords;
         Vector3<float> normal;
 
-        __host__ __device__ explicit pixel_t(
+        __host__ __device__ explicit fragment_t(
                 bool occupied = false,
                 const Vector3<float>& coords = Vector3<float>(),
                 const Vector3<float>& normal = Vector3<float>()

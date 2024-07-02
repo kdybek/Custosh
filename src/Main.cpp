@@ -6,7 +6,6 @@
 #include "Utility.cuh"
 #include "Renderer.cuh"
 #include "Mesh.h"
-#include "WindowsConsoleScreenBuffer.h"
 
 using namespace Custosh;
 
@@ -41,7 +40,7 @@ int main()
 
     Mesh cube(cubeVer, cubeInd);
 
-    HostDevResizableMatrix<pixel_t> screen(70, 70);
+    // TODO: renderer should have its own ppm
     OrtProjMatrix opm({-1, -1, 1},
                       {1, 1, 10},
                       {0, 0, 0},
@@ -64,11 +63,6 @@ int main()
 
     Vector3<float> rotationVec3 = {0, 0, 1};
 
-    WindowsConsoleScreenBuffer buf1;
-    WindowsConsoleScreenBuffer buf2;
-
-    HostDevPtr<char> characters(70 * 70);
-
     while (true) {
         auto start = std::chrono::high_resolution_clock::now();
 
@@ -76,39 +70,12 @@ int main()
         cube.rotate({0, 0, 2}, rotationVec2, rotationAngle2);
         cube.rotate({0, 0, 2}, rotationVec3, rotationAngle3);
 
-        Renderer::rasterizeModel(cube, screen, ppm);
-        screen.loadToDev();
-        Renderer::computeFragments<<<1, 70>>>(screen.devPtr(), screen.getNRows(), screen.getNCols(), ls, characters.devPtr());
-        cudaDeviceSynchronize();
-        characters.loadToHost();
-
-        buf1.draw(characters.hostPtr(), 70, 70);
-        buf1.activate();
-        Renderer::clearScreen(screen);
+        Renderer::drawMesh(cube, ppm, ls);
 
         auto end = std::chrono::high_resolution_clock::now();
 
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long) 0, 30 - elapsed.count())));
-
-        /*start = std::chrono::high_resolution_clock::now();
-
-        cube.rotate({0, 0, 2}, rotationVec1, rotationAngle1);
-        cube.rotate({0, 0, 2}, rotationVec2, rotationAngle2);
-        cube.rotate({0, 0, 2}, rotationVec3, rotationAngle3);
-
-        Renderer::rasterizeModel(cube, screen, ppm);
-        bMap = Renderer::getBrightnessMap(screen, ls);
-
-        buf2.draw(bMap);
-        buf2.activate();
-        Renderer::clearScreen(screen);
-
-        end = std::chrono::high_resolution_clock::now();
-
-        elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long)0, 30 - elapsed.count())));*/
+        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long) 0, 10000 - elapsed.count())));
     }
 }

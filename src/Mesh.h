@@ -9,28 +9,20 @@
 
 namespace Custosh
 {
-
     class Mesh
     {
     public:
-        Mesh(std::vector<Vector3<float>> vertices, std::vector<triangleIndices_t> triangles)
-                : m_vertices(std::move(vertices)),
-                  m_triangles(std::move(triangles))
+        Mesh(const std::vector<Vector3<float>>& vertices, const std::vector<triangleIndices_t>& indices)
+                : m_vertices(vertices.size()),
+                  m_indices(indices.size())
         {
-        }
-
-        [[nodiscard]] std::vector<triangle3D_t> getTriangles() const
-        {
-            std::vector<triangle3D_t> result;
-
-            result.reserve(m_triangles.size());
-            for (const triangleIndices_t& triangle: m_triangles) {
-                result.emplace_back(m_vertices.at(triangle.p0),
-                                    m_vertices.at(triangle.p1),
-                                    m_vertices.at(triangle.p2));
+            for (unsigned int i = 0; i < vertices.size(); ++i) {
+                m_vertices.hostPtr()[i] = vertices[i];
             }
 
-            return result;
+            for (unsigned int i = 0; i < indices.size(); ++i) {
+                m_indices.hostPtr()[i] = indices[i];
+            }
         }
 
         void rotate(const Vector3<float>& origin, const Vector3<float>& rotationVec, float angle)
@@ -40,14 +32,17 @@ namespace Custosh
 
             Quaternion<float> normalizedQ = rotationQ * static_cast<float>(1.f / sqrt(rotationQ.normSq()));
 
-            for (auto& v: m_vertices) {
-                v = rotatePoint(origin, normalizedQ, v);
+            for (unsigned int i = 0; i < m_vertices.size(); ++i) {
+                m_vertices.hostPtr()[i] = rotatePoint(origin, normalizedQ, m_vertices.hostPtr()[i]);
             }
         }
 
+        [[nodiscard]] const HostDevPtr<Vector3<float>>& hostDevVerticesPtr() const { return m_vertices; }
+        [[nodiscard]] const HostDevPtr<triangleIndices_t>& hostDevIndicesPtr() const { return m_indices; }
+
     private:
-        std::vector<Vector3<float>> m_vertices;
-        std::vector<triangleIndices_t> m_triangles;
+        HostDevPtr<Vector3<float>> m_vertices;
+        HostDevPtr<triangleIndices_t> m_indices;
 
         static Vector3<float> rotatePoint(const Vector3<float>& origin,
                                           const Quaternion<float>& normalizedRotationQ,

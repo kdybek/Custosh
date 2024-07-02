@@ -547,7 +547,26 @@ namespace Custosh
 
         __host__ __device__ DevPtr& operator=(const DevPtr&) = delete;
 
-        // TODO: move constructor and move assignment operator
+        __host__ DevPtr(DevPtr&& other) noexcept: m_devPtr(other.m_devPtr), m_size(other.m_size)
+        {
+            other.m_devPtr = nullptr;
+            other.m_size = 0;
+        }
+
+        __host__ DevPtr& operator=(DevPtr&& other) noexcept
+        {
+            if (this != &other) {
+                if (m_devPtr) { cudaFree(m_devPtr); }
+
+                m_devPtr = other.m_devPtr;
+                m_size = other.m_size;
+
+                other.m_devPtr = nullptr;
+                other.m_size = 0;
+            }
+
+            return *this;
+        }
 
         __host__ void resizeAndDiscardData(unsigned int newSize)
         {
@@ -589,7 +608,10 @@ namespace Custosh
     class HostDevPtr
     {
     public:
-        __host__ explicit HostDevPtr(unsigned int size) : m_hostPtr(nullptr), m_devPtr(nullptr), m_size(size)
+        __host__ explicit HostDevPtr(unsigned int size)
+                : m_hostPtr(nullptr),
+                  m_devPtr(nullptr),
+                  m_size(size)
         {
             CUDA_CHECK(cudaMallocHost(&m_hostPtr, size * sizeof(T)));
             CUDA_CHECK(cudaMalloc(&m_devPtr, size * sizeof(T)));
@@ -605,7 +627,33 @@ namespace Custosh
 
         __host__ __device__ HostDevPtr& operator=(const HostDevPtr&) = delete;
 
-        // TODO: move constructor and move assignment operator
+        __host__ HostDevPtr(HostDevPtr&& other) noexcept
+                : m_hostPtr(other.m_hostPtr),
+                  m_devPtr(other.m_devPtr),
+                  m_size(other.m_size)
+        {
+            other.m_hostPtr = nullptr;
+            other.m_devPtr = nullptr;
+            other.m_size = 0;
+        }
+
+        __host__ HostDevPtr& operator=(HostDevPtr&& other) noexcept
+        {
+            if (this != &other) {
+                if (m_hostPtr) { cudaFreeHost(m_hostPtr); }
+                if (m_devPtr) { cudaFree(m_devPtr); }
+
+                m_hostPtr = other.m_hostPtr;
+                m_devPtr = other.m_devPtr;
+                m_size = other.m_size;
+
+                other.m_hostPtr = nullptr;
+                other.m_devPtr = nullptr;
+                other.m_size = 0;
+            }
+
+            return *this;
+        }
 
         __host__ void resizeAndDiscardData(unsigned int newSize)
         {

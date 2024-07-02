@@ -37,8 +37,11 @@ namespace Custosh
             }
         }
 
-        [[nodiscard]] const HostDevPtr<Vector3<float>>& hostDevVerticesPtr() const { return m_vertices; }
-        [[nodiscard]] const HostDevPtr<triangleIndices_t>& hostDevIndicesPtr() const { return m_indices; }
+        [[nodiscard]] const HostDevPtr<Vector3<float>>& hostDevVerticesPtr() const
+        { return m_vertices; }
+
+        [[nodiscard]] const HostDevPtr<triangleIndices_t>& hostDevIndicesPtr() const
+        { return m_indices; }
 
     private:
         HostDevPtr<Vector3<float>> m_vertices;

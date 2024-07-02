@@ -43,26 +43,42 @@ do { \
 
 #define DARR_BASE_SIZE 8
 
-#define HOST_DEV_AUX_FUNC [[nodiscard]] __host__ __device__ inline constexpr
+#define HOST_DEV_AUX_FUNC __host__ __device__ inline constexpr
 
 namespace Custosh
 {
-    /* Constants */
-    inline const std::string g_devASCIIByBrightness =
-            R"( .'`,_^"-+:;!><~?iI[]{}1()|\/tfjrnxuvczXYUJCLQ0OZmwqpdkbhao*#MW&8%B@$)";
-
     /* Functions */
-    HOST_DEV_AUX_FUNC float degreesToRadians(float degrees)
+    [[nodiscard]] HOST_DEV_AUX_FUNC float degreesToRadians(float degrees)
     {
         return degrees * (std::numbers::pi_v<float> / 180.f);
     }
 
     template<typename T>
-    HOST_DEV_AUX_FUNC T clamp(T a, T min, T max)
+    [[nodiscard]] HOST_DEV_AUX_FUNC T clamp(T a, T min, T max)
     {
         if (a < min) { return min; }
         else if (a > max) { return max; }
         else { return a; }
+    }
+
+    template<typename T>
+    [[nodiscard]] HOST_DEV_AUX_FUNC T max3(T a, T b, T c)
+    {
+        return max(max(a, b), c);
+    }
+
+    template<typename T>
+    [[nodiscard]] HOST_DEV_AUX_FUNC T min3(T a, T b, T c)
+    {
+        return min(min(a, b), c);
+    }
+
+    template<typename T>
+    HOST_DEV_AUX_FUNC void swap(T& a, T& b)
+    {
+        T temp = a;
+        a = b;
+        b = temp;
     }
 
     /* Classes */

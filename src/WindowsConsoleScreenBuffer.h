@@ -15,11 +15,11 @@ namespace Custosh
     {
     public:
         WindowsConsoleScreenBuffer() : m_handle(CreateConsoleScreenBuffer(
-                GENERIC_READ | GENERIC_WRITE,   // Access rights
-                0,                              // No sharing
-                nullptr,                        // Default security attributes
-                CONSOLE_TEXTMODE_BUFFER,        // Text mode buffer
-                nullptr                         // Default buffer data
+                GENERIC_WRITE,              // Access rights
+                0,                          // No sharing
+                nullptr,                    // Default security attributes
+                CONSOLE_TEXTMODE_BUFFER,    // Text mode buffer
+                nullptr                     // Default buffer data
         ))
         {
             if (m_handle == INVALID_HANDLE_VALUE) {
@@ -50,12 +50,13 @@ namespace Custosh
             return *this;
         }
 
-        void draw(const char* ptr, unsigned int rows, unsigned int cols)
+        void draw(const char* str, unsigned int rows, unsigned int cols)
         {
             for (unsigned int i = 0; i < rows; ++i) {
                 DWORD charsWritten;
                 COORD coord = {0, static_cast<SHORT>(rows - i - 1)};
-                WriteConsoleOutputCharacter(m_handle, ptr + i * cols, cols, coord, &charsWritten);
+                WriteConsoleOutputCharacter(m_handle, str + i * cols, cols, coord, &charsWritten);
+                // Number of written chars is ignored to not waste time.
             }
         }
 

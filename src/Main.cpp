@@ -49,7 +49,7 @@ int main()
     PerspectiveMatrix pm(1, 10);
     PerspectiveProjMatrix ppm(pm, opm);
 
-    lightSource_t ls;
+    lightSource_t ls({0, 0, 0}, 0.5);
 
     float rotationAngle1 = degreesToRadians(3);
 

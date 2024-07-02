@@ -1,7 +1,5 @@
 #include "Renderer.cuh"
 
-#include <iostream>
-
 #include "WindowsConsoleScreenBuffer.h"
 
 #define BASE_DEV_WSPACE_SIZE 1000
@@ -12,8 +10,8 @@ namespace Custosh::Renderer
     {
         /* Device global variables */
         __constant__ const char* g_devASCIIByBrightness =
-                R"( .'`,_^"-+:;!><~?iI[]{}1()|\/tfjrnxuvczXYUJCLQ0OZmwqpdkbhao*#MW&8%B@$)";
-        __constant__ const unsigned int g_devNumASCII = 69; // TODO: make sure it's right
+                R"( `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@)";
+        __constant__ const unsigned int g_devNumASCII = 94; // TODO: make sure it's right
 
         /* Host global variables */
         unsigned int g_hostScreenRows = 70;
@@ -22,34 +20,14 @@ namespace Custosh::Renderer
         WindowsConsoleScreenBuffer g_hostInactiveBuf;
 
         /* Device working space pointers */
-        HostDevPtr<Vector2<float>> g_hostVertex2DDevPtr(BASE_DEV_WSPACE_SIZE);
-        HostDevPtr<boundingBox_t> g_hostBoundingBoxDevPtr(BASE_DEV_WSPACE_SIZE);
-        HostDevPtr<float> g_hostTriangleCross2DDevPtr(BASE_DEV_WSPACE_SIZE);
-        HostDevPtr<Vector3<float>> g_hostTriangleNormalDevPtr(BASE_DEV_WSPACE_SIZE);
-        HostDevPtr<fragment_t> g_hostFragmentDevPtr(g_hostScreenRows * g_hostScreenCols);
+        DevPtr<Vector2<float>> g_hostVertex2DDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<boundingBox_t> g_hostBoundingBoxDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<float> g_hostTriangleCross2DDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<Vector3<float>> g_hostTriangleNormalDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<fragment_t> g_hostFragmentDevPtr(g_hostScreenRows * g_hostScreenCols);
         HostDevPtr<char> g_hostCharPtr(g_hostScreenRows * g_hostScreenCols);
 
         /* Device auxiliary functions */
-        template<typename T>
-        [[nodiscard]] __device__ T max3(T a, T b, T c)
-        {
-            return max(max(a, b), c);
-        }
-
-        template<typename T>
-        [[nodiscard]] __device__ T min3(T a, T b, T c)
-        {
-            return min(min(a, b), c);
-        }
-
-        template<typename T>
-        __device__ void swap(T& a, T& b)
-        {
-            T temp = a;
-            a = b;
-            b = temp;
-        }
-
         [[nodiscard]] __device__ char brightnessToASCII(float brightness)
         {
             unsigned int idx = ceil(brightness * static_cast<float>(g_devNumASCII - 1));
@@ -143,16 +121,14 @@ namespace Custosh::Renderer
         }
 
         [[nodiscard]] __device__ Vector3<float>
-        getCartesianCoords(const triangle3D_t& triangle3D,
-                           const barycentricCoords_t& bc)
+        getCartesianCoords(const triangle3D_t& triangle3D, const barycentricCoords_t& bc)
         {
             return {triangle3D.p0.x() * bc.alpha + triangle3D.p1.x() * bc.beta + triangle3D.p2.x() * bc.gamma,
                     triangle3D.p0.y() * bc.alpha + triangle3D.p1.y() * bc.beta + triangle3D.p2.y() * bc.gamma,
                     triangle3D.p0.z() * bc.alpha + triangle3D.p1.z() * bc.beta + triangle3D.p2.z() * bc.gamma};
         }
 
-        [[nodiscard]] __device__ float distanceSq(const Vector3<float>& a,
-                                                  const Vector3<float>& b)
+        [[nodiscard]] __device__ float distanceSq(const Vector3<float>& a, const Vector3<float>& b)
         {
             return static_cast<float>(pow((a.x() - b.x()), 2) + pow((a.y() - b.y()), 2) + pow((a.z() - b.z()), 2));
         }
@@ -169,8 +145,7 @@ namespace Custosh::Renderer
             return vec1.dot(vec2) / (dist1 * dist2);
         }
 
-        [[nodiscard]] __device__ float pointBrightness(const fragment_t& p,
-                                                       const lightSource_t& ls)
+        [[nodiscard]] __device__ float pointBrightness(const fragment_t& p, const lightSource_t& ls)
         {
             float distSq = distanceSq(p.coords, ls.coords);
             float cos = cosine3D(p.coords, Vector3<float>(p.coords + p.normal), ls.coords);
@@ -217,11 +192,11 @@ namespace Custosh::Renderer
                                      PerspectiveProjMatrix ppm,
                                      Vector2<float>* vertex2DPtr)
         {
-            const unsigned int x = threadIdx.x;
+            const unsigned int i = threadIdx.x;
 
-            if (x >= numVertices) { return; }
+            if (i >= numVertices) { return; }
 
-            vertex2DPtr[x] = applyPerspective(vertex3DPtr[x], ppm);
+            vertex2DPtr[i] = applyPerspective(vertex3DPtr[i], ppm);
         }
 
         __global__ void populateTriangleParams(unsigned int rows,
@@ -234,12 +209,12 @@ namespace Custosh::Renderer
                                                Vector3<float>* normalPtr,
                                                boundingBox_t* boundingBoxPtr)
         {
-            const unsigned int x = threadIdx.x;
+            const unsigned int i = threadIdx.x;
 
-            if (x >= numTriangles) { return; }
+            if (i >= numTriangles) { return; }
 
-            triangle2D_t triangle2D = getTriangle2D(indexPtr[x], vertex2DPtr);
-            triangle3D_t triangle3D = getTriangle3D(indexPtr[x], vertex3DPtr);
+            triangle2D_t triangle2D = getTriangle2D(indexPtr[i], vertex2DPtr);
+            triangle3D_t triangle3D = getTriangle3D(indexPtr[i], vertex3DPtr);
 
             float cross = cross2D(triangle2D.p0, triangle2D.p2, triangle2D.p1);
 
@@ -247,13 +222,13 @@ namespace Custosh::Renderer
             if (cross < 0.f) {
                 swap(triangle2D.p0, triangle2D.p1);
                 swap(triangle3D.p0, triangle3D.p1);
-                swap(indexPtr[x].p0, indexPtr[x].p1);
+                swap(indexPtr[i].p0, indexPtr[i].p1);
                 cross *= -1;
             }
 
-            cross2DPtr[x] = cross;
-            normalPtr[x] = triangleNormal(triangle3D);
-            boundingBoxPtr[x] = findBounds(triangle2D, rows, cols);
+            cross2DPtr[i] = cross;
+            normalPtr[i] = triangleNormal(triangle3D);
+            boundingBoxPtr[i] = findBounds(triangle2D, rows, cols);
         }
 
         __global__ void fragmentShader1(unsigned int rows,
@@ -267,12 +242,12 @@ namespace Custosh::Renderer
                                         const boundingBox_t* boundingBoxPtr,
                                         fragment_t* fragmentPtr)
         {
-            const unsigned int x = threadIdx.x;
-            const unsigned int y = blockIdx.x;
+            const unsigned int y = threadIdx.x;
+            const unsigned int x = blockIdx.x;
 
-            if (x >= rows || y >= cols) { return; }
+            if (y >= rows || x >= cols) { return; }
 
-            fragmentPtr[x * cols + y].occupied = false;
+            fragmentPtr[y * cols + x].occupied = false;
 
             for (unsigned int k = 0; k < numTriangles; ++k) {
                 triangle2D_t triangle2D = getTriangle2D(indexPtr[k], vertex2DPtr);
@@ -286,11 +261,11 @@ namespace Custosh::Renderer
 
                 if (inTriangle(triangle2D,
                                boundingBox,
-                               Vector2<float>({static_cast<float>(x), static_cast<float>(y)}),
+                               Vector2<float>({static_cast<float>(y), static_cast<float>(x)}),
                                triangleArea2x,
                                bc)) {
                     Vector3<float> projectedPoint = getCartesianCoords(triangle3D, bc);
-                    fragment_t& screenPoint = fragmentPtr[x * cols + y];
+                    fragment_t& screenPoint = fragmentPtr[y * cols + x];
 
                     if (!screenPoint.occupied || screenPoint.coords.z() > projectedPoint.z()) {
                         screenPoint.occupied = true;
@@ -307,17 +282,17 @@ namespace Custosh::Renderer
                                         lightSource_t ls,
                                         char* characters)
         {
-            const unsigned int x = threadIdx.x;
-            const unsigned int y = blockIdx.x;
+            const unsigned int y = threadIdx.x;
+            const unsigned int x = blockIdx.x;
 
-            if (x >= rows || y >= cols) { return; }
+            if (y >= rows || x >= cols) { return; }
 
-            const fragment_t& screenPoint = fragmentPtr[x * cols + y];
+            const fragment_t& screenPoint = fragmentPtr[y * cols + x];
 
             if (screenPoint.occupied) {
-                characters[x * cols + y] = brightnessToASCII(pointBrightness(screenPoint, ls));
+                characters[y * cols + x] = brightnessToASCII(pointBrightness(screenPoint, ls));
             }
-            else { characters[x * cols + y] = brightnessToASCII(0.f); }
+            else { characters[y * cols + x] = brightnessToASCII(0.f); }
         }
 
     } // anonymous
@@ -343,7 +318,7 @@ namespace Custosh::Renderer
         vertexShader<<<numBlocksVShader, threadsPerBlockVShader>>>(vertex3DPtr,
                                                                    numVertices,
                                                                    ppm,
-                                                                   g_hostVertex2DDevPtr.devPtr());
+                                                                   g_hostVertex2DDevPtr.get());
         CUDA_CHECK(cudaGetLastError());
         CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -354,11 +329,11 @@ namespace Custosh::Renderer
                                                                            g_hostScreenCols,
                                                                            indexPtr,
                                                                            numTriangles,
-                                                                           g_hostVertex2DDevPtr.devPtr(),
+                                                                           g_hostVertex2DDevPtr.get(),
                                                                            vertex3DPtr,
-                                                                           g_hostTriangleCross2DDevPtr.devPtr(),
-                                                                           g_hostTriangleNormalDevPtr.devPtr(),
-                                                                           g_hostBoundingBoxDevPtr.devPtr());
+                                                                           g_hostTriangleCross2DDevPtr.get(),
+                                                                           g_hostTriangleNormalDevPtr.get(),
+                                                                           g_hostBoundingBoxDevPtr.get());
         CUDA_CHECK(cudaGetLastError());
         CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -370,24 +345,25 @@ namespace Custosh::Renderer
                                     g_hostScreenCols,
                                     indexPtr,
                                     numTriangles,
-                                    g_hostVertex2DDevPtr.devPtr(),
+                                    g_hostVertex2DDevPtr.get(),
                                     vertex3DPtr,
-                                    g_hostTriangleCross2DDevPtr.devPtr(),
-                                    g_hostTriangleNormalDevPtr.devPtr(),
-                                    g_hostBoundingBoxDevPtr.devPtr(),
-                                    g_hostFragmentDevPtr.devPtr());
+                                    g_hostTriangleCross2DDevPtr.get(),
+                                    g_hostTriangleNormalDevPtr.get(),
+                                    g_hostBoundingBoxDevPtr.get(),
+                                    g_hostFragmentDevPtr.get());
         CUDA_CHECK(cudaGetLastError());
         CUDA_CHECK(cudaDeviceSynchronize());
 
-        fragmentShader2<<<70, 70>>>(g_hostFragmentDevPtr.devPtr(),
+        fragmentShader2<<<70, 70>>>(g_hostFragmentDevPtr.get(),
                                     g_hostScreenRows,
                                     g_hostScreenCols,
                                     ls,
                                     g_hostCharPtr.devPtr());
         CUDA_CHECK(cudaGetLastError());
+
         g_hostCharPtr.loadToHost();
         g_hostInactiveBuf.draw(g_hostCharPtr.hostPtr(), g_hostScreenRows, g_hostScreenCols);
         swapBuffers();
     }
 
-} // Custosh::Rendere
+} // Custosh::Renderer

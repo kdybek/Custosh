@@ -801,17 +801,21 @@ namespace Custosh
 
     }; // Quaternion
 
+    /* Aliases */
+    using Vertex2D = Vector2<float>;
+    using Vertex3D = Vector3<float>;
+
     /* Structs */
     struct triangle3D_t
     {
-        Vector3<float> p0;
-        Vector3<float> p1;
-        Vector3<float> p2;
+        Vertex3D p0;
+        Vertex3D p1;
+        Vertex3D p2;
 
         __host__ __device__ explicit triangle3D_t(
-                const Vector3<float>& p0 = Vector3<float>(),
-                const Vector3<float>& p1 = Vector3<float>(),
-                const Vector3<float>& p2 = Vector3<float>()
+                const Vertex3D& p0 = Vertex3D(),
+                const Vertex3D& p1 = Vertex3D(),
+                const Vertex3D& p2 = Vertex3D()
         ) : p0(p0), p1(p1), p2(p2)
         {
         }
@@ -819,14 +823,14 @@ namespace Custosh
 
     struct triangle2D_t
     {
-        Vector2<float> p0;
-        Vector2<float> p1;
-        Vector2<float> p2;
+        Vertex2D p0;
+        Vertex2D p1;
+        Vertex2D p2;
 
         __host__ __device__ explicit triangle2D_t(
-                const Vector2<float>& p0 = Vector2<float>(),
-                const Vector2<float>& p1 = Vector2<float>(),
-                const Vector2<float>& p2 = Vector2<float>()
+                const Vertex2D& p0 = Vertex2D(),
+                const Vertex2D& p1 = Vertex2D(),
+                const Vertex2D& p2 = Vertex2D()
         ) : p0(p0), p1(p1), p2(p2)
         {
         }
@@ -882,12 +886,12 @@ namespace Custosh
     struct fragment_t
     {
         bool occupied;
-        Vector3<float> coords;
+        Vertex3D coords;
         Vector3<float> normal;
 
         __host__ __device__ explicit fragment_t(
                 bool occupied = false,
-                const Vector3<float>& coords = Vector3<float>(),
+                const Vertex3D& coords = Vertex3D(),
                 const Vector3<float>& normal = Vector3<float>()
         ) : occupied(occupied), coords(coords), normal(normal)
         {
@@ -896,11 +900,11 @@ namespace Custosh
 
     struct lightSource_t
     {
-        Vector3<float> coords;
+        Vertex3D coords;
         float intensity;
 
         __host__ __device__ explicit lightSource_t(
-                const Vector3<float>& coords = Vector3<float>(),
+                const Vertex3D& coords = Vertex3D(),
                 float intensity = 1.f
         ) : coords(coords), intensity(intensity)
         {

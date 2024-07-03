@@ -25,7 +25,7 @@ namespace Custosh::Renderer
         WindowsConsoleScreenBuffer g_hostInactiveBuf;
 
         /* Device working space pointers */
-        DevPtr<Vector2<float>> g_hostVertex2DDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<Vertex2D> g_hostVertex2DDevPtr(BASE_DEV_WSPACE_SIZE);
         DevPtr<boundingBox_t> g_hostBoundingBoxDevPtr(BASE_DEV_WSPACE_SIZE);
         DevPtr<float> g_hostTriangleCross2DDevPtr(BASE_DEV_WSPACE_SIZE);
         DevPtr<Vector3<float>> g_hostTriangleNormalDevPtr(BASE_DEV_WSPACE_SIZE);
@@ -58,27 +58,28 @@ namespace Custosh::Renderer
             return boundingBox;
         }
 
-        [[nodiscard]] __device__ bool isBottomOrRight(const Vector2<float>& a,
-                                                      const Vector2<float>& b)
+        [[nodiscard]] __device__ bool isBottomOrRight(const Vertex2D& a,
+                                                      const Vertex2D& b)
         {
-            Vector2<float> edge = {b.x() - a.x(), b.y() - a.y()};
+            auto edge = Vector2<float>(b - a);
             bool bottomEdge = edge.y() == 0 && edge.x() < 0;
             bool rightEdge = edge.y() < 0;
 
             return bottomEdge || rightEdge;
         }
 
-        [[nodiscard]] __device__ float cross2D(const Vector2<float>& a,
-                                               const Vector2<float>& b,
-                                               const Vector2<float>& c)
+        [[nodiscard]] __device__ float cross2D(const Vertex2D& a,
+                                               const Vertex2D& b,
+                                               const Vertex2D& c)
         {
-            Vector2<float> ab = {b.x() - a.x(), b.y() - a.y()};
-            Vector2<float> ac = {c.x() - a.x(), c.y() - a.y()};
+            auto ab = Vector2<float>(b - a);
+            auto ac = Vector2<float>(c - a);
+
             return ab.x() * ac.y() - ab.y() * ac.x();
         }
 
         [[nodiscard]] __device__ bool inBoundingBox(const boundingBox_t& boundingBox,
-                                                    const Vector2<float>& p)
+                                                    const Vertex2D& p)
         {
             if (p.x() >= boundingBox.xMin && p.x() <= boundingBox.xMax &&
                 p.y() >= boundingBox.yMin && p.y() <= boundingBox.yMax) {
@@ -89,7 +90,7 @@ namespace Custosh::Renderer
 
         [[nodiscard]] __device__ bool inTriangle(const triangle2D_t& triangle2D,
                                                  const boundingBox_t& boundingBox,
-                                                 const Vector2<float>& p,
+                                                 const Vertex2D& p,
                                                  float triangleArea2x,
                                                  barycentricCoords_t& barycentricCoords)
         {
@@ -110,22 +111,22 @@ namespace Custosh::Renderer
             return (w0 >= 0.f && w1 >= 0.f && w2 >= 0.f);
         }
 
-        [[nodiscard]] __device__ Vector2<float> applyPerspective(const Vector3<float>& p,
-                                                                 const PerspectiveProjMatrix& ppm)
+        [[nodiscard]] __device__ Vertex2D applyPerspective(const Vertex3D& p,
+                                                           const PerspectiveProjMatrix& ppm)
         {
             Vector4<float> pPerspective = Vector4<float>(ppm * p.toHomogeneous()).normalizeW();
             return {pPerspective.x(), pPerspective.y()};
         }
 
-        [[nodiscard]] __device__ Vector3<float>
-        getCartesianCoords(const triangle3D_t& triangle3D, const barycentricCoords_t& bc)
+        [[nodiscard]] __device__ Vertex3D getCartesianCoords(const triangle3D_t& triangle3D,
+                                                             const barycentricCoords_t& bc)
         {
             return {triangle3D.p0.x() * bc.alpha + triangle3D.p1.x() * bc.beta + triangle3D.p2.x() * bc.gamma,
                     triangle3D.p0.y() * bc.alpha + triangle3D.p1.y() * bc.beta + triangle3D.p2.y() * bc.gamma,
                     triangle3D.p0.z() * bc.alpha + triangle3D.p1.z() * bc.beta + triangle3D.p2.z() * bc.gamma};
         }
 
-        [[nodiscard]] __device__ float distanceSq(const Vector3<float>& a, const Vector3<float>& b)
+        [[nodiscard]] __device__ float distanceSq(const Vertex3D& a, const Vertex3D& b)
         {
             return static_cast<float>(pow((a.x() - b.x()), 2) + pow((a.y() - b.y()), 2) + pow((a.z() - b.z()), 2));
         }
@@ -143,14 +144,14 @@ namespace Custosh::Renderer
         // The vertices are clockwise oriented, but we're looking from 0 towards positive z values.
         [[nodiscard]] __device__ Vector3<float> triangleNormal(const triangle3D_t& triangle3D)
         {
-            Vector3<float> res = Vector3<float>(triangle3D.p1 - triangle3D.p0).cross(
+            Vector3<float> normal = Vector3<float>(triangle3D.p1 - triangle3D.p0).cross(
                     Vector3<float>(triangle3D.p2 - triangle3D.p0));
 
-            return Vector3<float>(res.normalized());
+            return Vector3<float>(normal.normalized());
         }
 
         [[nodiscard]] __device__ triangle2D_t getTriangle2D(const triangleIndices_t& triangleIndices,
-                                                            const Vector2<float>* vertex2DPtr)
+                                                            const Vertex2D* vertex2DPtr)
         {
             return triangle2D_t(vertex2DPtr[triangleIndices.p0],
                                 vertex2DPtr[triangleIndices.p1],
@@ -158,7 +159,7 @@ namespace Custosh::Renderer
         }
 
         [[nodiscard]] __device__ triangle3D_t getTriangle3D(const triangleIndices_t& triangleIndices,
-                                                            const Vector3<float>* vertex3DPtr)
+                                                            const Vertex3D* vertex3DPtr)
         {
             return triangle3D_t(vertex3DPtr[triangleIndices.p0],
                                 vertex3DPtr[triangleIndices.p1],
@@ -167,10 +168,10 @@ namespace Custosh::Renderer
 
         /* Kernels */
         // TODO: vertex manipulation (translation, rotation, etc.)
-        __global__ void vertexShader(const Vector3<float>* vertex3DPtr,
+        __global__ void vertexShader(const Vertex3D* vertex3DPtr,
                                      unsigned int numVertices,
                                      PerspectiveProjMatrix ppm,
-                                     Vector2<float>* vertex2DPtr)
+                                     Vertex2D* vertex2DPtr)
         {
             const unsigned int i = threadIdx.x;
 
@@ -181,8 +182,8 @@ namespace Custosh::Renderer
 
         __global__ void geometryShader(triangleIndices_t* indexPtr,
                                        unsigned int numTriangles,
-                                       const Vector2<float>* vertex2DPtr,
-                                       const Vector3<float>* vertex3DPtr,
+                                       const Vertex2D* vertex2DPtr,
+                                       const Vertex3D* vertex3DPtr,
                                        float* cross2DPtr,
                                        Vector3<float>* normalPtr,
                                        boundingBox_t* boundingBoxPtr)
@@ -213,8 +214,8 @@ namespace Custosh::Renderer
                                        unsigned int cols,
                                        const triangleIndices_t* indexPtr,
                                        unsigned int numTriangles,
-                                       const Vector2<float>* vertex2DPtr,
-                                       const Vector3<float>* vertex3DPtr,
+                                       const Vertex2D* vertex2DPtr,
+                                       const Vertex3D* vertex3DPtr,
                                        const float* cross2DPtr,
                                        const Vector3<float>* normalPtr,
                                        const boundingBox_t* boundingBoxPtr,
@@ -240,10 +241,10 @@ namespace Custosh::Renderer
 
                 if (inTriangle(triangle2D,
                                boundingBox,
-                               Vector2<float>({static_cast<float>(x), static_cast<float>(y)}),
+                               Vertex2D({static_cast<float>(x), static_cast<float>(y)}),
                                triangleArea2x,
                                bc)) {
-                    Vector3<float> projectedPoint = getCartesianCoords(triangle3D, bc);
+                    Vertex3D projectedPoint = getCartesianCoords(triangle3D, bc);
 
                     if (!fragment.occupied || fragment.coords.z() > projectedPoint.z()) {
                         fragment.occupied = true;
@@ -309,7 +310,7 @@ namespace Custosh::Renderer
 
         __host__ void callVertexShader(const Mesh& mesh, const PerspectiveProjMatrix& PPM)
         {
-            const Vector3<float>* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
+            const Vertex3D* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
             unsigned int numVertices = mesh.hostDevVerticesPtr().size();
 
             unsigned int threadsPerBlock = std::min(numVertices, static_cast<unsigned int>(MAX_THREADS_PER_BLOCK));
@@ -324,7 +325,7 @@ namespace Custosh::Renderer
 
         __host__ void callGeometryShader(const Mesh& mesh)
         {
-            const Vector3<float>* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
+            const Vertex3D* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
             triangleIndices_t* indexPtr = mesh.hostDevIndicesPtr().devPtr();
             unsigned int numTriangles = mesh.hostDevIndicesPtr().size();
 
@@ -346,7 +347,7 @@ namespace Custosh::Renderer
                                          unsigned int windowRows,
                                          unsigned int windowCols)
         {
-            const Vector3<float>* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
+            const Vertex3D* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
             triangleIndices_t* indexPtr = mesh.hostDevIndicesPtr().devPtr();
             unsigned int numTriangles = mesh.hostDevIndicesPtr().size();
 

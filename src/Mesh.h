@@ -12,7 +12,7 @@ namespace Custosh
     class Mesh
     {
     public:
-        Mesh(const std::vector<Vector3<float>>& vertices, const std::vector<triangleIndices_t>& indices)
+        Mesh(const std::vector<Vertex3D>& vertices, const std::vector<triangleIndices_t>& indices)
                 : m_vertices(vertices.size()),
                   m_indices(indices.size())
         {
@@ -25,7 +25,7 @@ namespace Custosh
             }
         }
 
-        void rotate(const Vector3<float>& origin, const Vector3<float>& rotationVec, float angle)
+        void rotate(const Vertex3D& origin, const Vector3<float>& rotationVec, float angle)
         {
             Quaternion<float> rotationQ = {std::cos(angle / 2),
                                            Custosh::Vector3<float>(std::sin(angle / 2) * rotationVec)};
@@ -37,26 +37,26 @@ namespace Custosh
             }
         }
 
-        [[nodiscard]] const HostDevPtr<Vector3<float>>& hostDevVerticesPtr() const
+        [[nodiscard]] const HostDevPtr<Vertex3D>& hostDevVerticesPtr() const
         { return m_vertices; }
 
         [[nodiscard]] const HostDevPtr<triangleIndices_t>& hostDevIndicesPtr() const
         { return m_indices; }
 
     private:
-        HostDevPtr<Vector3<float>> m_vertices;
+        HostDevPtr<Vertex3D> m_vertices;
         HostDevPtr<triangleIndices_t> m_indices;
 
-        static Vector3<float> rotatePoint(const Vector3<float>& origin,
-                                          const Quaternion<float>& normalizedRotationQ,
-                                          const Vector3<float>& p)
+        static Vertex3D rotatePoint(const Vertex3D& origin,
+                                    const Quaternion<float>& normalizedRotationQ,
+                                    const Vertex3D& p)
         {
-            Vector3<float> originPVec3 = {p.x() - origin.x(), p.y() - origin.y(), p.z() - origin.z()};
+            Vertex3D originPVec3 = {p.x() - origin.x(), p.y() - origin.y(), p.z() - origin.z()};
             Quaternion<float> originPVec3AsQ(0.f, originPVec3);
             Quaternion<float> originNewVec3AsQ =
                     normalizedRotationQ * originPVec3AsQ * normalizedRotationQ.conjunction();
 
-            return Vector3<float>(originNewVec3AsQ.imaginaryVec() + origin);
+            return Vertex3D(originNewVec3AsQ.imaginaryVec() + origin);
         }
 
     }; // Mesh

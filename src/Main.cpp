@@ -40,15 +40,6 @@ int main()
 
     Mesh cube(cubeVer, cubeInd);
 
-    // TODO: renderer should have its own ppm
-    OrtProjMatrix opm({-1, -1, 1},
-                      {1, 1, 10},
-                      {0, 0, 0},
-                      {70, 70, 0});
-
-    PerspectiveMatrix pm(1, 10);
-    PerspectiveProjMatrix ppm(pm, opm);
-
     lightSource_t ls({0, 0, 0}, 0.5);
 
     float rotationAngle1 = degreesToRadians(3);
@@ -70,7 +61,7 @@ int main()
         cube.rotate({0, 0, 2}, rotationVec2, rotationAngle2);
         cube.rotate({0, 0, 2}, rotationVec3, rotationAngle3);
 
-        Renderer::drawMesh(cube, ppm, ls);
+        Renderer::drawMesh(cube, ls);
 
         auto end = std::chrono::high_resolution_clock::now();
 
@@ -79,3 +70,5 @@ int main()
         std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long) 0, 30 - elapsed.count())));
     }
 }
+
+// TODO: logging

@@ -41,9 +41,9 @@ do { \
 #define INIT_LIST_ERR_MSG "incorrect initializer list"
 #define IDX_ERR_MSG "index out of bounds"
 
-#define DARR_BASE_SIZE 8
-
 #define HOST_DEV_AUX_FUNC __host__ __device__ inline constexpr
+
+#define DARR_BASE_SIZE 8
 
 namespace Custosh
 {
@@ -849,16 +849,16 @@ namespace Custosh
 
     struct boundingBox_t
     {
-        int xMax;
-        int xMin;
-        int yMax;
-        int yMin;
+        float xMax;
+        float xMin;
+        float yMax;
+        float yMin;
 
         __host__ __device__ explicit boundingBox_t(
-                int xMax = 0,
-                int xMin = 0,
-                int yMax = 0,
-                int yMin = 0
+                float xMax = 0.f,
+                float xMin = 0.f,
+                float yMax = 0.f,
+                float yMin = 0.f
         ) : xMax(xMax), xMin(xMin), yMax(yMax), yMin(yMin)
         {
         }

@@ -6,9 +6,7 @@
 
 namespace Custosh::Renderer
 {
-        __host__ void drawMesh(const Mesh& mesh, const PerspectiveProjMatrix& ppm, const lightSource_t& ls);
-
-        // TODO: void set rows and cols function
+        __host__ void drawMesh(const Mesh& mesh, const lightSource_t& ls);
 
 } // Custosh::Renderer
 

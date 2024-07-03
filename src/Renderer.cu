@@ -130,22 +130,12 @@ namespace Custosh::Renderer
             return static_cast<float>(pow((a.x() - b.x()), 2) + pow((a.y() - b.y()), 2) + pow((a.z() - b.z()), 2));
         }
 
-        [[nodiscard]] __device__ float cosine3D(const Vector3<float>& center,
-                                                const Vector3<float>& p1,
-                                                const Vector3<float>& p2)
-        {
-            auto vec1 = Vector3<float>(p1 - center);
-            auto vec2 = Vector3<float>(p2 - center);
-            float dist1 = std::sqrt(distanceSq(center, p1));
-            float dist2 = std::sqrt(distanceSq(center, p2));
-
-            return vec1.dot(vec2) / (dist1 * dist2);
-        }
-
         [[nodiscard]] __device__ float pointBrightness(const fragment_t& p, const lightSource_t& ls)
         {
             float distSq = distanceSq(p.coords, ls.coords);
-            float cos = cosine3D(p.coords, Vector3<float>(p.coords + p.normal), ls.coords);
+            auto pointToLightSourceVec = Vector3<float>(ls.coords - p.coords);
+            auto pointToLightSourceVecNorm = Vector3<float>(pointToLightSourceVec.normalized());
+            float cos = pointToLightSourceVecNorm.dot(p.normal);
 
             return clamp(max(cos, 0.f) * ls.intensity / distSq, 0.f, 1.f);
         }
@@ -189,13 +179,13 @@ namespace Custosh::Renderer
             vertex2DPtr[i] = applyPerspective(vertex3DPtr[i], ppm);
         }
 
-        __global__ void populateTriangleParams(triangleIndices_t* indexPtr,
-                                               unsigned int numTriangles,
-                                               const Vector2<float>* vertex2DPtr,
-                                               const Vector3<float>* vertex3DPtr,
-                                               float* cross2DPtr,
-                                               Vector3<float>* normalPtr,
-                                               boundingBox_t* boundingBoxPtr)
+        __global__ void geometryShader(triangleIndices_t* indexPtr,
+                                       unsigned int numTriangles,
+                                       const Vector2<float>* vertex2DPtr,
+                                       const Vector3<float>* vertex3DPtr,
+                                       float* cross2DPtr,
+                                       Vector3<float>* normalPtr,
+                                       boundingBox_t* boundingBoxPtr)
         {
             const unsigned int i = threadIdx.x;
 
@@ -317,7 +307,7 @@ namespace Custosh::Renderer
             }
         }
 
-        __host__ void callVertexShaderKernel(const Mesh& mesh, const PerspectiveProjMatrix& PPM)
+        __host__ void callVertexShader(const Mesh& mesh, const PerspectiveProjMatrix& PPM)
         {
             const Vector3<float>* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
             unsigned int numVertices = mesh.hostDevVerticesPtr().size();
@@ -332,7 +322,7 @@ namespace Custosh::Renderer
             CUDA_CHECK(cudaGetLastError());
         }
 
-        __host__ void callPopulateTriangleParamsKernel(const Mesh& mesh)
+        __host__ void callGeometryShader(const Mesh& mesh)
         {
             const Vector3<float>* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
             triangleIndices_t* indexPtr = mesh.hostDevIndicesPtr().devPtr();
@@ -341,20 +331,20 @@ namespace Custosh::Renderer
             unsigned int threadsPerBlock = std::min(numTriangles, static_cast<unsigned int>(MAX_THREADS_PER_BLOCK));
             unsigned int numBlocks = (numTriangles + threadsPerBlock - 1) / threadsPerBlock;
 
-            populateTriangleParams<<<numBlocks, threadsPerBlock>>>(indexPtr,
-                                                                   numTriangles,
-                                                                   g_hostVertex2DDevPtr.get(),
-                                                                   vertex3DPtr,
-                                                                   g_hostTriangleCross2DDevPtr.get(),
-                                                                   g_hostTriangleNormalDevPtr.get(),
-                                                                   g_hostBoundingBoxDevPtr.get());
+            geometryShader<<<numBlocks, threadsPerBlock>>>(indexPtr,
+                                                           numTriangles,
+                                                           g_hostVertex2DDevPtr.get(),
+                                                           vertex3DPtr,
+                                                           g_hostTriangleCross2DDevPtr.get(),
+                                                           g_hostTriangleNormalDevPtr.get(),
+                                                           g_hostBoundingBoxDevPtr.get());
             CUDA_CHECK(cudaGetLastError());
         }
 
-        __host__ void callFragmentShaderKernel(const Mesh& mesh,
-                                               const lightSource_t& ls,
-                                               unsigned int windowRows,
-                                               unsigned int windowCols)
+        __host__ void callFragmentShader(const Mesh& mesh,
+                                         const lightSource_t& ls,
+                                         unsigned int windowRows,
+                                         unsigned int windowCols)
         {
             const Vector3<float>* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
             triangleIndices_t* indexPtr = mesh.hostDevIndicesPtr().devPtr();
@@ -394,15 +384,15 @@ namespace Custosh::Renderer
         mesh.hostDevVerticesPtr().loadToDev();
         mesh.hostDevIndicesPtr().loadToDev();
 
-        callVertexShaderKernel(mesh, PPM);
+        callVertexShader(mesh, PPM);
 
         CUDA_CHECK(cudaDeviceSynchronize());
 
-        callPopulateTriangleParamsKernel(mesh);
+        callGeometryShader(mesh);
 
         CUDA_CHECK(cudaDeviceSynchronize());
 
-        callFragmentShaderKernel(mesh, ls, windowDim.y(), windowDim.x());
+        callFragmentShader(mesh, ls, windowDim.y(), windowDim.x());
 
         g_hostCharPtr.loadToHost();
         g_hostInactiveBuf.draw(g_hostCharPtr.hostPtr(), windowDim.y(), windowDim.x());

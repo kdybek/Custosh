@@ -42,6 +42,8 @@ do { \
 #define IDX_ERR_MSG "index out of bounds"
 
 #define HOST_DEV_AUX_FUNC __host__ __device__ inline constexpr
+#define HOST_DEV_GETTER __host__ __device__ inline
+#define HOST_GETTER __host__ inline
 
 #define DARR_BASE_SIZE 8
 
@@ -193,10 +195,10 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] __host__ __device__ unsigned int numRows() const
+        [[nodiscard]] HOST_DEV_GETTER unsigned int numRows() const
         { return Rows; }
 
-        [[nodiscard]] __host__ __device__ unsigned int numCols() const
+        [[nodiscard]] HOST_DEV_GETTER unsigned int numCols() const
         { return Cols; }
 
     protected:
@@ -288,16 +290,16 @@ namespace Custosh
         {
         }
 
-        [[nodiscard]] __host__ __device__ T& x()
+        [[nodiscard]] HOST_DEV_GETTER T& x()
         { return (*this)(0); }
 
-        [[nodiscard]] __host__ __device__ const T& x() const
+        [[nodiscard]] HOST_DEV_GETTER const T& x() const
         { return (*this)(0); }
 
-        [[nodiscard]] __host__ __device__ T& y()
+        [[nodiscard]] HOST_DEV_GETTER T& y()
         { return (*this)(1); }
 
-        [[nodiscard]] __host__ __device__ const T& y() const
+        [[nodiscard]] HOST_DEV_GETTER const T& y() const
         { return (*this)(1); }
 
     }; // Vector2
@@ -334,28 +336,28 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] __host__ __device__ T& x()
+        [[nodiscard]] HOST_DEV_GETTER T& x()
         { return (*this)(0); }
 
-        [[nodiscard]] __host__ __device__ const T& x() const
+        [[nodiscard]] HOST_DEV_GETTER const T& x() const
         { return (*this)(0); }
 
-        [[nodiscard]] __host__ __device__ T& y()
+        [[nodiscard]] HOST_DEV_GETTER T& y()
         { return (*this)(1); }
 
-        [[nodiscard]] __host__ __device__ const T& y() const
+        [[nodiscard]] HOST_DEV_GETTER const T& y() const
         { return (*this)(1); }
 
-        [[nodiscard]] __host__ __device__ T& z()
+        [[nodiscard]] HOST_DEV_GETTER T& z()
         { return (*this)(2); }
 
-        [[nodiscard]] __host__ __device__ const T& z() const
+        [[nodiscard]] HOST_DEV_GETTER const T& z() const
         { return (*this)(2); }
 
-        [[nodiscard]] __host__ __device__ T& w()
+        [[nodiscard]] HOST_DEV_GETTER T& w()
         { return (*this)(3); }
 
-        [[nodiscard]] __host__ __device__ const T& w() const
+        [[nodiscard]] HOST_DEV_GETTER const T& w() const
         { return (*this)(3); }
 
     }; // Vector4
@@ -396,25 +398,86 @@ namespace Custosh
             return {x(), y(), z(), static_cast<T>(1)};
         }
 
-        [[nodiscard]] __host__ __device__ T& x()
+        [[nodiscard]] HOST_DEV_GETTER T& x()
         { return (*this)(0); }
 
-        [[nodiscard]] __host__ __device__ const T& x() const
+        [[nodiscard]] HOST_DEV_GETTER const T& x() const
         { return (*this)(0); }
 
-        [[nodiscard]] __host__ __device__ T& y()
+        [[nodiscard]] HOST_DEV_GETTER T& y()
         { return (*this)(1); }
 
-        [[nodiscard]] __host__ __device__ const T& y() const
+        [[nodiscard]] HOST_DEV_GETTER const T& y() const
         { return (*this)(1); }
 
-        [[nodiscard]] __host__ __device__ T& z()
+        [[nodiscard]] HOST_DEV_GETTER T& z()
         { return (*this)(2); }
 
-        [[nodiscard]] __host__ __device__ const T& z() const
+        [[nodiscard]] HOST_DEV_GETTER const T& z() const
         { return (*this)(2); }
 
     }; // Vector3
+
+    template<typename T>
+    class Quaternion
+    {
+    public:
+        __host__ __device__ Quaternion(T real, Vector3<T> imaginaryVec)
+                : m_realPart(real),
+                  m_imaginaryVec(std::move(imaginaryVec))
+        {
+        }
+
+        __host__ __device__ Quaternion(T real, T i, T j, T k)
+                : m_realPart(real), m_imaginaryVec({i, j, k})
+        {
+        }
+
+        [[nodiscard]] __host__ __device__ Quaternion<T> operator*(const T& scalar) const
+        {
+            return {scalar * m_realPart, Vector3<T>(scalar * m_imaginaryVec)};
+        }
+
+        [[nodiscard]] __host__ __device__ friend Quaternion<T> operator*(const T& scalar,
+                                                                         const Quaternion<T>& quaternion)
+        {
+            return quaternion * scalar;
+        }
+
+        [[nodiscard]] __host__ __device__ Quaternion<T> operator+(const Quaternion& other) const
+        {
+            return {m_realPart + other.m_realPart, m_imaginaryVec + other.m_imaginaryVec};
+        }
+
+        [[nodiscard]] __host__ __device__ Quaternion<T> operator*(const Quaternion& other) const
+        {
+            return {m_realPart * other.m_realPart - m_imaginaryVec.dot(other.m_imaginaryVec),
+                    Vector3<float>(m_realPart * other.m_imaginaryVec +
+                                   other.m_realPart * m_imaginaryVec +
+                                   m_imaginaryVec.cross(other.m_imaginaryVec))};
+        }
+
+        [[nodiscard]] __host__ __device__ Quaternion<T> conjunction() const
+        {
+            return {m_realPart, Vector3<T>(-1 * m_imaginaryVec)};
+        }
+
+        [[nodiscard]] __host__ __device__ T normSq() const
+        {
+            return m_realPart * m_realPart + m_imaginaryVec.normSq();
+        }
+
+        [[nodiscard]] HOST_DEV_GETTER T realPart() const
+        { return m_realPart; }
+
+        [[nodiscard]] HOST_DEV_GETTER Vector3<T> imaginaryVec() const
+        { return m_imaginaryVec; }
+
+    private:
+        T m_realPart;
+        Vector3<T> m_imaginaryVec;
+
+    }; // Quaternion
 
     class PerspectiveMatrix : public Matrix<float, 4, 4>
     {
@@ -473,6 +536,30 @@ namespace Custosh
 
     }; // ScalingMatrix
 
+    class RotationMatrix : public Matrix<float, 4, 4>
+    {
+    public:
+        __host__ __device__ explicit RotationMatrix(const Quaternion<float>& rotationQuaternion)
+                : Matrix<float, 4, 4>(init(rotationQuaternion))
+        {
+        }
+
+    private:
+        __host__ __device__ static Matrix<float, 4, 4> init(const Quaternion<float>& rotationQuaternion)
+        {
+            float w = rotationQuaternion.realPart();
+            float x = rotationQuaternion.imaginaryVec().x();
+            float y = rotationQuaternion.imaginaryVec().y();
+            float z = rotationQuaternion.imaginaryVec().z();
+
+            return {{1.f - 2.f * (y * y + z * z), 2.f * (x * y - w * z),       2.f * (x * z + w * y),       0.f},
+                    {2.f * (x * y + w * z),       1.f - 2.f * (x * x + z * z), 2.f * (y * z - w * x),       0.f},
+                    {2.f * (x * z - w * y),       2.f * (y * z + w * x),       1.f - 2.f * (x * x + y * y), 0.f},
+                    {0.f,                         0.f,                         0.f,                         1.f}};
+        }
+
+    }; // RotationMatrix
+
     class OrtProjMatrix : public Matrix<float, 4, 4>
     {
     public:
@@ -530,6 +617,90 @@ namespace Custosh
     }; // PerspectiveProjMatrix
 
     template<typename T>
+    class HostPtr
+    {
+    public:
+        __host__ explicit HostPtr(unsigned int size) : m_hostPtr(nullptr), m_size(size)
+        {
+            CUDA_CHECK(cudaMallocHost(&m_hostPtr, size * sizeof(T)));
+        }
+
+        __host__ virtual ~HostPtr()
+        {
+            if (m_hostPtr) { cudaFreeHost(m_hostPtr); }
+        }
+
+        __host__ __device__ HostPtr(const HostPtr&) = delete;
+
+        __host__ __device__ HostPtr& operator=(const HostPtr&) = delete;
+
+        __host__ HostPtr(HostPtr&& other) noexcept: m_hostPtr(other.m_hostPtr), m_size(other.m_size)
+        {
+            other.m_hostPtr = nullptr;
+            other.m_size = 0;
+        }
+
+        __host__ HostPtr& operator=(HostPtr&& other) noexcept
+        {
+            if (this != &other) {
+                if (m_hostPtr) { cudaFreeHost(m_hostPtr); }
+
+                m_hostPtr = other.m_hostPtr;
+                m_size = other.m_size;
+
+                other.m_hostPtr = nullptr;
+                other.m_size = 0;
+            }
+
+            return *this;
+        }
+
+        __host__ void resizeAndDiscardData(unsigned int newSize)
+        {
+            if (m_size == newSize) { return; }
+
+            if (m_hostPtr) { CUDA_CHECK(cudaFreeHost(m_hostPtr)); }
+
+            CUDA_CHECK(cudaMallocHost(&m_hostPtr, newSize * sizeof(T)));
+            m_size = newSize;
+        }
+
+        __host__ void resizeAndCopy(unsigned int newSize)
+        {
+            if (m_size == newSize) { return; }
+
+            T* oldHostPtr = m_hostPtr;
+            unsigned int oldSize = m_size;
+
+            CUDA_CHECK(cudaMallocHost(&m_hostPtr, newSize * sizeof(T)));
+            m_size = newSize;
+
+            unsigned int sizeToCopy = std::min(oldSize, newSize);
+
+            if (oldHostPtr) {
+                CUDA_CHECK(cudaMemcpy(m_hostPtr, oldHostPtr, sizeToCopy * sizeof(T), cudaMemcpyHostToHost));
+                CUDA_CHECK(cudaFreeHost(oldHostPtr));
+            }
+        }
+
+        __host__ void loadToDev(T* devPtr) const
+        {
+            CUDA_CHECK(cudaMemcpy(devPtr, m_hostPtr, m_size * sizeof(T), cudaMemcpyHostToDevice));
+        }
+
+        [[nodiscard]] HOST_GETTER T* get() const
+        { return m_hostPtr; }
+
+        [[nodiscard]] HOST_GETTER unsigned int size() const
+        { return m_size; }
+
+    private:
+        T* m_hostPtr;
+        unsigned int m_size;
+
+    }; // HostPtr
+
+    template<typename T>
     class DevPtr
     {
     public:
@@ -570,6 +741,8 @@ namespace Custosh
 
         __host__ void resizeAndDiscardData(unsigned int newSize)
         {
+            if (m_size == newSize) { return; }
+
             if (m_devPtr) { CUDA_CHECK(cudaFree(m_devPtr)); }
 
             CUDA_CHECK(cudaMalloc(&m_devPtr, newSize * sizeof(T)));
@@ -578,6 +751,8 @@ namespace Custosh
 
         __host__ void resizeAndCopy(unsigned int newSize)
         {
+            if (m_size == newSize) { return; }
+
             T* oldDevPtr = m_devPtr;
             unsigned int oldSize = m_size;
 
@@ -592,10 +767,15 @@ namespace Custosh
             }
         }
 
-        [[nodiscard]] __host__ T* get() const
+        __host__ void loadToHost(T* hostPtr) const
+        {
+            CUDA_CHECK(cudaMemcpy(hostPtr, m_devPtr, m_size * sizeof(T), cudaMemcpyDeviceToHost));
+        }
+
+        [[nodiscard]] HOST_GETTER T* get() const
         { return m_devPtr; }
 
-        [[nodiscard]] __host__ unsigned int size() const
+        [[nodiscard]] HOST_GETTER unsigned int size() const
         { return m_size; }
 
     private:
@@ -603,203 +783,6 @@ namespace Custosh
         unsigned int m_size;
 
     }; // DevPtr
-
-    template<typename T>
-    class HostDevPtr
-    {
-    public:
-        __host__ explicit HostDevPtr(unsigned int size)
-                : m_hostPtr(nullptr),
-                  m_devPtr(nullptr),
-                  m_size(size)
-        {
-            CUDA_CHECK(cudaMallocHost(&m_hostPtr, size * sizeof(T)));
-            CUDA_CHECK(cudaMalloc(&m_devPtr, size * sizeof(T)));
-        }
-
-        __host__ virtual ~HostDevPtr()
-        {
-            if (m_hostPtr) { cudaFreeHost(m_hostPtr); }
-            if (m_devPtr) { cudaFree(m_devPtr); }
-        }
-
-        __host__ __device__ HostDevPtr(const HostDevPtr&) = delete;
-
-        __host__ __device__ HostDevPtr& operator=(const HostDevPtr&) = delete;
-
-        __host__ HostDevPtr(HostDevPtr&& other) noexcept
-                : m_hostPtr(other.m_hostPtr),
-                  m_devPtr(other.m_devPtr),
-                  m_size(other.m_size)
-        {
-            other.m_hostPtr = nullptr;
-            other.m_devPtr = nullptr;
-            other.m_size = 0;
-        }
-
-        __host__ HostDevPtr& operator=(HostDevPtr&& other) noexcept
-        {
-            if (this != &other) {
-                if (m_hostPtr) { cudaFreeHost(m_hostPtr); }
-                if (m_devPtr) { cudaFree(m_devPtr); }
-
-                m_hostPtr = other.m_hostPtr;
-                m_devPtr = other.m_devPtr;
-                m_size = other.m_size;
-
-                other.m_hostPtr = nullptr;
-                other.m_devPtr = nullptr;
-                other.m_size = 0;
-            }
-
-            return *this;
-        }
-
-        __host__ void resizeAndDiscardData(unsigned int newSize)
-        {
-            if (m_hostPtr) { CUDA_CHECK(cudaFreeHost(m_hostPtr)); }
-            if (m_devPtr) { CUDA_CHECK(cudaFree(m_devPtr)); }
-
-            CUDA_CHECK(cudaMallocHost(&m_hostPtr, newSize * sizeof(T)));
-            CUDA_CHECK(cudaMalloc(&m_devPtr, newSize * sizeof(T)));
-            m_size = newSize;
-        }
-
-        __host__ void resizeAndCopy(unsigned int newSize)
-        {
-            T* oldHostPtr = m_hostPtr;
-            T* oldDevPtr = m_devPtr;
-            unsigned int oldSize = m_size;
-
-            CUDA_CHECK(cudaMallocHost(&m_hostPtr, newSize * sizeof(T)));
-            CUDA_CHECK(cudaMalloc(&m_devPtr, newSize * sizeof(T)));
-            m_size = newSize;
-
-            unsigned int sizeToCopy = std::min(oldSize, newSize);
-
-            if (oldHostPtr) {
-                CUDA_CHECK(cudaMemcpy(m_hostPtr, oldHostPtr, sizeToCopy * sizeof(T), cudaMemcpyHostToHost));
-                CUDA_CHECK(cudaFreeHost(oldHostPtr));
-            }
-
-            if (oldDevPtr) {
-                CUDA_CHECK(cudaMemcpy(m_devPtr, oldDevPtr, sizeToCopy * sizeof(T), cudaMemcpyDeviceToDevice));
-                CUDA_CHECK(cudaFree(oldDevPtr));
-            }
-        }
-
-        __host__ void loadToDev() const
-        {
-            CUDA_CHECK(cudaMemcpy(m_devPtr, m_hostPtr, m_size * sizeof(T), cudaMemcpyHostToDevice));
-        }
-
-        __host__ void loadToHost() const
-        {
-            CUDA_CHECK(cudaMemcpy(m_hostPtr, m_devPtr, m_size * sizeof(T), cudaMemcpyDeviceToHost));
-        }
-
-        [[nodiscard]] __host__ T* hostPtr() const
-        { return m_hostPtr; }
-
-        [[nodiscard]] __host__ T* devPtr() const
-        { return m_devPtr; }
-
-        [[nodiscard]] __host__ unsigned int size() const
-        { return m_size; }
-
-    private:
-        T* m_hostPtr;
-        T* m_devPtr;
-        unsigned int m_size;
-
-    }; // HostDevPtr
-
-    template<typename T>
-    class HostDevDynamicArray : private HostDevPtr<T>
-    {
-    public:
-        __host__ HostDevDynamicArray() : m_afterLastIdx(0), HostDevPtr<T>(DARR_BASE_SIZE)
-        {
-        }
-
-        void pushBack(const T& t)
-        {
-            if (m_afterLastIdx == this->size()) { this->resizeAndCopy(this->size() * 2); }
-
-            (*this)[m_afterLastIdx] = t;
-        }
-
-        using HostDevPtr<T>::loadToDev;
-        using HostDevPtr<T>::loadToHost;
-        using HostDevPtr<T>::hostPtr;
-        using HostDevPtr<T>::devPtr;
-        using HostDevPtr<T>::size;
-
-    private:
-        unsigned int m_afterLastIdx;
-
-    }; // HostDevDynamicArray
-
-    template<typename T>
-    class Quaternion
-    {
-    public:
-        __host__ __device__ Quaternion(T real, Vector3<T> imaginaryVec)
-                : m_realPart(real),
-                  m_imaginaryVec(std::move(imaginaryVec))
-        {
-        }
-
-        __host__ __device__ Quaternion(T real, T i, T j, T k)
-                : m_realPart(real), m_imaginaryVec({i, j, k})
-        {
-        }
-
-        [[nodiscard]] __host__ __device__ Quaternion<T> operator*(const T& scalar) const
-        {
-            return {scalar * m_realPart, Vector3<T>(scalar * m_imaginaryVec)};
-        }
-
-        [[nodiscard]] __host__ __device__ friend Quaternion<T>
-        operator*(const T& scalar, const Quaternion<T>& quaternion)
-        {
-            return quaternion * scalar;
-        }
-
-        [[nodiscard]] __host__ __device__ Quaternion<T> operator+(const Quaternion& other) const
-        {
-            return {m_realPart + other.m_realPart, m_imaginaryVec + other.m_imaginaryVec};
-        }
-
-        [[nodiscard]] __host__ __device__ Quaternion<T> operator*(const Quaternion& other) const
-        {
-            return {m_realPart * other.m_realPart - m_imaginaryVec.dot(other.m_imaginaryVec),
-                    Vector3<float>(m_realPart * other.m_imaginaryVec +
-                                   other.m_realPart * m_imaginaryVec +
-                                   m_imaginaryVec.cross(other.m_imaginaryVec))};
-        }
-
-        [[nodiscard]] __host__ __device__ Quaternion<T> conjunction() const
-        {
-            return {m_realPart, Vector3<T>(-1 * m_imaginaryVec)};
-        }
-
-        [[nodiscard]] __host__ __device__ T normSq() const
-        {
-            return m_realPart * m_realPart + m_imaginaryVec.normSq();
-        }
-
-        [[nodiscard]] __host__ __device__ T realPart() const
-        { return m_realPart; }
-
-        [[nodiscard]] __host__ __device__ Vector3<T> imaginaryVec() const
-        { return m_imaginaryVec; }
-
-    private:
-        T m_realPart;
-        Vector3<T> m_imaginaryVec;
-
-    }; // Quaternion
 
     /* Aliases */
     using Vertex2D = Vector2<float>;

@@ -5,7 +5,6 @@
 
 #include "Utility.cuh"
 #include "Renderer.cuh"
-#include "Mesh.h"
 
 using namespace Custosh;
 
@@ -61,7 +60,13 @@ int main()
         cube.rotate({0, 0, 2}, rotationVec2, rotationAngle2);
         cube.rotate({0, 0, 2}, rotationVec3, rotationAngle3);
 
-        Renderer::drawMesh(cube, ls);
+        Scene scene;
+
+        scene.add(cube);
+
+        Renderer::loadScene(scene);
+
+        Renderer::draw(ls);
 
         auto end = std::chrono::high_resolution_clock::now();
 

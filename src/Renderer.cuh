@@ -2,11 +2,13 @@
 #define CUSTOSH_RENDERER_CUH
 
 
-#include "Mesh.h"
+#include "Scene.h"
 
 namespace Custosh::Renderer
 {
-        __host__ void drawMesh(const Mesh& mesh, const lightSource_t& ls);
+    __host__ void loadScene(const Scene& scene);
+
+    __host__ void draw(const lightSource_t& ls);
 
 } // Custosh::Renderer
 

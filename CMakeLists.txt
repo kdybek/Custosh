@@ -5,10 +5,10 @@ add_executable(Custosh
         src/Main.cpp
         src/Utility.cuh
         src/CustoshExcept.h
-        src/Mesh.h
         src/WindowsConsoleScreenBuffer.h
         src/Renderer.cu
         src/Renderer.cuh
+        src/Scene.h
 )
 
 set_target_properties(Custosh PROPERTIES

@@ -23,13 +23,16 @@ namespace Custosh::Renderer
         /* Host global variables */
         WindowsConsoleScreenBuffer g_hostActiveBuf;
         WindowsConsoleScreenBuffer g_hostInactiveBuf;
+        HostPtr<char> g_hostCharHostPtr(BASE_DEV_WSPACE_SIZE);
 
         /* Device working space pointers */
+        DevPtr<Vertex3D> g_hostVertex3DDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<triangleIndices_t> g_hostIndexDevPtr(BASE_DEV_WSPACE_SIZE);
         DevPtr<Vertex2D> g_hostVertex2DDevPtr(BASE_DEV_WSPACE_SIZE);
         DevPtr<boundingBox_t> g_hostBoundingBoxDevPtr(BASE_DEV_WSPACE_SIZE);
         DevPtr<float> g_hostTriangleCross2DDevPtr(BASE_DEV_WSPACE_SIZE);
         DevPtr<Vector3<float>> g_hostTriangleNormalDevPtr(BASE_DEV_WSPACE_SIZE);
-        HostDevPtr<char> g_hostCharPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<char> g_hostCharDevPtr(BASE_DEV_WSPACE_SIZE);
 
         /* Device auxiliary functions */
         [[nodiscard]] __device__ char brightnessToASCII(float brightness)
@@ -261,24 +264,6 @@ namespace Custosh::Renderer
         }
 
         /* Host auxiliary functions */
-        [[nodiscard]] __host__ Vector2<unsigned int> getWindowDimensions()
-        {
-            HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-            if (hConsole == INVALID_HANDLE_VALUE) {
-                throw CustoshException("error getting console handle");
-            }
-
-            CONSOLE_SCREEN_BUFFER_INFO csbi;
-            if (!GetConsoleScreenBufferInfo(hConsole, &csbi)) {
-                throw CustoshException("error getting console screen buffer info");
-            }
-
-            unsigned int rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
-            unsigned int cols = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-
-            return {cols, rows};
-        }
-
         [[nodiscard]] __host__ PerspectiveProjMatrix CCV2ScreenPPM(unsigned int screenRows, unsigned int screenCols)
         {
             return {PerspectiveMatrix(PM_NEAR_PLANE, PM_FAR_PLANE),
@@ -288,68 +273,59 @@ namespace Custosh::Renderer
                                   {static_cast<float>(screenCols), static_cast<float>(screenRows), 0.f})};
         }
 
-        __host__ void resizePtrs(unsigned int numVertices,
-                                 unsigned int numTriangles,
-                                 unsigned int windowRows,
-                                 unsigned int windowCols)
+        __host__ void resizeSceneDependentPtrs(unsigned int numVertices, unsigned int numTriangles)
         {
-            if (numVertices > g_hostVertex2DDevPtr.size()) {
-                g_hostVertex2DDevPtr.resizeAndDiscardData(numVertices);
-            }
+            g_hostVertex3DDevPtr.resizeAndDiscardData(numVertices);
+            g_hostVertex2DDevPtr.resizeAndDiscardData(numVertices);
 
-            if (numTriangles > g_hostBoundingBoxDevPtr.size()) {
-                g_hostBoundingBoxDevPtr.resizeAndDiscardData(numTriangles);
-                g_hostTriangleCross2DDevPtr.resizeAndDiscardData(numTriangles);
-                g_hostTriangleNormalDevPtr.resizeAndDiscardData(numTriangles);
-            }
-
-            if (windowRows * windowCols > g_hostCharPtr.size()) {
-                g_hostCharPtr.resizeAndDiscardData(windowRows * windowCols);
-            }
+            g_hostIndexDevPtr.resizeAndDiscardData(numTriangles);
+            g_hostBoundingBoxDevPtr.resizeAndDiscardData(numTriangles);
+            g_hostTriangleCross2DDevPtr.resizeAndDiscardData(numTriangles);
+            g_hostTriangleNormalDevPtr.resizeAndDiscardData(numTriangles);
         }
 
-        __host__ void callVertexShader(const Mesh& mesh, const PerspectiveProjMatrix& PPM)
+        __host__ void resizeScreenDependentPtrs(unsigned int windowRows, unsigned int windowCols)
         {
-            const Vertex3D* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
-            unsigned int numVertices = mesh.hostDevVerticesPtr().size();
+            g_hostCharHostPtr.resizeAndDiscardData(windowRows * windowCols);
+            g_hostCharDevPtr.resizeAndDiscardData(windowRows * windowCols);
+        }
+
+        __host__ void callVertexShader(const PerspectiveProjMatrix& PPM)
+        {
+            unsigned int numVertices = g_hostVertex3DDevPtr.size();
 
             unsigned int threadsPerBlock = std::min(numVertices, static_cast<unsigned int>(MAX_THREADS_PER_BLOCK));
             unsigned int numBlocks = (numVertices + threadsPerBlock - 1) / threadsPerBlock;
 
-            vertexShader<<<numBlocks, threadsPerBlock>>>(vertex3DPtr,
+            vertexShader<<<numBlocks, threadsPerBlock>>>(g_hostVertex3DDevPtr.get(),
                                                          numVertices,
                                                          PPM,
                                                          g_hostVertex2DDevPtr.get());
             CUDA_CHECK(cudaGetLastError());
         }
 
-        __host__ void callGeometryShader(const Mesh& mesh)
+        __host__ void callGeometryShader()
         {
-            const Vertex3D* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
-            triangleIndices_t* indexPtr = mesh.hostDevIndicesPtr().devPtr();
-            unsigned int numTriangles = mesh.hostDevIndicesPtr().size();
+            unsigned int numTriangles = g_hostIndexDevPtr.size();
 
             unsigned int threadsPerBlock = std::min(numTriangles, static_cast<unsigned int>(MAX_THREADS_PER_BLOCK));
             unsigned int numBlocks = (numTriangles + threadsPerBlock - 1) / threadsPerBlock;
 
-            geometryShader<<<numBlocks, threadsPerBlock>>>(indexPtr,
+            geometryShader<<<numBlocks, threadsPerBlock>>>(g_hostIndexDevPtr.get(),
                                                            numTriangles,
                                                            g_hostVertex2DDevPtr.get(),
-                                                           vertex3DPtr,
+                                                           g_hostVertex3DDevPtr.get(),
                                                            g_hostTriangleCross2DDevPtr.get(),
                                                            g_hostTriangleNormalDevPtr.get(),
                                                            g_hostBoundingBoxDevPtr.get());
             CUDA_CHECK(cudaGetLastError());
         }
 
-        __host__ void callFragmentShader(const Mesh& mesh,
-                                         const lightSource_t& ls,
+        __host__ void callFragmentShader(const lightSource_t& ls,
                                          unsigned int windowRows,
                                          unsigned int windowCols)
         {
-            const Vertex3D* vertex3DPtr = mesh.hostDevVerticesPtr().devPtr();
-            triangleIndices_t* indexPtr = mesh.hostDevIndicesPtr().devPtr();
-            unsigned int numTriangles = mesh.hostDevIndicesPtr().size();
+            unsigned int numTriangles = g_hostIndexDevPtr.size();
 
             dim3 threadsPerBlock(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y);
             dim3 numBlocks((windowCols + threadsPerBlock.x - 1) / threadsPerBlock.x,
@@ -357,46 +333,51 @@ namespace Custosh::Renderer
 
             fragmentShader<<<numBlocks, threadsPerBlock>>>(windowRows,
                                                            windowCols,
-                                                           indexPtr,
+                                                           g_hostIndexDevPtr.get(),
                                                            numTriangles,
                                                            g_hostVertex2DDevPtr.get(),
-                                                           vertex3DPtr,
+                                                           g_hostVertex3DDevPtr.get(),
                                                            g_hostTriangleCross2DDevPtr.get(),
                                                            g_hostTriangleNormalDevPtr.get(),
                                                            g_hostBoundingBoxDevPtr.get(),
                                                            ls,
-                                                           g_hostCharPtr.devPtr());
+                                                           g_hostCharDevPtr.get());
             CUDA_CHECK(cudaGetLastError());
         }
 
     } // anonymous
 
-    __host__ void drawMesh(const Mesh& mesh, const lightSource_t& ls)
+    __host__ void loadScene(const Scene& scene)
     {
-        Vector2<unsigned int> windowDim = getWindowDimensions();
+        resizeSceneDependentPtrs(scene.verticesPtr().size(), scene.indicesPtr().size());
+
+        scene.verticesPtr().loadToDev(g_hostVertex3DDevPtr.get());
+        scene.indicesPtr().loadToDev(g_hostIndexDevPtr.get());
+    }
+
+    __host__ void draw(const lightSource_t& ls)
+    {
+        Vector2<unsigned int> windowDim = g_hostInactiveBuf.getWindowDimensions();
 
         windowDim.x() = std::min(windowDim.x(), windowDim.y());
         windowDim.y() = std::min(windowDim.x(), windowDim.y());
 
         PerspectiveProjMatrix PPM = CCV2ScreenPPM(windowDim.y(), windowDim.x());
 
-        resizePtrs(mesh.hostDevVerticesPtr().size(), mesh.hostDevIndicesPtr().size(), windowDim.y(), windowDim.x());
+        resizeScreenDependentPtrs(windowDim.y(), windowDim.x());
 
-        mesh.hostDevVerticesPtr().loadToDev();
-        mesh.hostDevIndicesPtr().loadToDev();
-
-        callVertexShader(mesh, PPM);
+        callVertexShader(PPM);
 
         CUDA_CHECK(cudaDeviceSynchronize());
 
-        callGeometryShader(mesh);
+        callGeometryShader();
 
         CUDA_CHECK(cudaDeviceSynchronize());
 
-        callFragmentShader(mesh, ls, windowDim.y(), windowDim.x());
+        callFragmentShader(ls, windowDim.y(), windowDim.x());
 
-        g_hostCharPtr.loadToHost();
-        g_hostInactiveBuf.draw(g_hostCharPtr.hostPtr(), windowDim.y(), windowDim.x());
+        g_hostCharDevPtr.loadToHost(g_hostCharHostPtr.get());
+        g_hostInactiveBuf.draw(g_hostCharHostPtr.get(), windowDim.y(), windowDim.x());
         g_hostInactiveBuf.activate();
         std::swap(g_hostActiveBuf, g_hostInactiveBuf);
     }

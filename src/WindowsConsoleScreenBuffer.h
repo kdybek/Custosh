@@ -5,6 +5,7 @@
 #define NOMINMAX
 
 #include <windows.h>
+#include <iostream>
 
 #include "CustoshExcept.h"
 #include "Utility.cuh"
@@ -15,11 +16,11 @@ namespace Custosh
     {
     public:
         WindowsConsoleScreenBuffer() : m_handle(CreateConsoleScreenBuffer(
-                GENERIC_WRITE,              // Access rights
-                0,                          // No sharing
-                nullptr,                    // Default security attributes
-                CONSOLE_TEXTMODE_BUFFER,    // Text mode buffer
-                nullptr                     // Default buffer data
+                GENERIC_WRITE | GENERIC_READ,   // Access rights
+                0,                              // No sharing
+                nullptr,                        // Default security attributes
+                CONSOLE_TEXTMODE_BUFFER,        // Text mode buffer
+                nullptr                         // Default buffer data
         ))
         {
             if (m_handle == INVALID_HANDLE_VALUE) {
@@ -63,6 +64,19 @@ namespace Custosh
         void activate() const
         {
             SetConsoleActiveScreenBuffer(m_handle);
+        }
+
+        [[nodiscard]] Vector2<unsigned int> getWindowDimensions()
+        {
+            CONSOLE_SCREEN_BUFFER_INFO csbi;
+            if (!GetConsoleScreenBufferInfo(m_handle, &csbi)) {
+                throw CustoshException("error getting console screen buffer info");
+            }
+
+            unsigned int rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+            unsigned int cols = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+
+            return {cols, rows};
         }
 
     private:

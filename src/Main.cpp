@@ -42,29 +42,29 @@ int main()
     lightSource_t ls({0, 0, 0}, 0.5);
 
     float rotationAngle1 = degreesToRadians(3);
-
     float rotationAngle2 = degreesToRadians(2);
-
     float rotationAngle3 = degreesToRadians(1);
 
     Vector3<float> rotationVec1 = {0, 1, 0};
-
     Vector3<float> rotationVec2 = {1, 0, 0};
-
     Vector3<float> rotationVec3 = {0, 0, 1};
+
+    Vertex3D origin = {0, 0, 2};
+
+    Scene scene;
+
+    scene.add(cube);
+
+    Renderer::loadScene(scene);
+
+    TransformMatrix rotatioMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1), origin);
+    TransformMatrix rotatioMat2 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle2), origin);
+    TransformMatrix rotatioMat3 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle3), origin);
+
+    Renderer::loadTransformMat(rotatioMat1 * rotatioMat2 * rotatioMat3);
 
     while (true) {
         auto start = std::chrono::high_resolution_clock::now();
-
-        cube.rotate({0, 0, 2}, rotationVec1, rotationAngle1);
-        cube.rotate({0, 0, 2}, rotationVec2, rotationAngle2);
-        cube.rotate({0, 0, 2}, rotationVec3, rotationAngle3);
-
-        Scene scene;
-
-        scene.add(cube);
-
-        Renderer::loadScene(scene);
 
         Renderer::draw(ls);
 

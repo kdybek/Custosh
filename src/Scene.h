@@ -20,35 +20,9 @@ namespace Custosh
         [[nodiscard]] inline const std::vector<triangleIndices_t>& triangles() const
         { return m_triangles; }
 
-        void rotate(const Vertex3D& origin, const Vector3<float>& rotationVec, float angle)
-        {
-            Quaternion<float> rotationQ = {std::cos(angle / 2),
-                                           Custosh::Vector3<float>(std::sin(angle / 2) * rotationVec)};
-
-            Quaternion<float> normalizedQ = rotationQ * static_cast<float>(1.f / sqrt(rotationQ.normSq()));
-
-            for (auto & vertex : m_vertices) {
-                vertex = rotatePoint(origin, normalizedQ, vertex);
-            }
-        }
-
     private:
         std::vector<Vertex3D> m_vertices;
         std::vector<triangleIndices_t> m_triangles;
-
-        static Vertex3D rotatePoint(const Vertex3D& origin,
-                                    const Quaternion<float>& normalizedRotationQ,
-                                    const Vertex3D& p)
-        {
-            auto centerTranslationVec = Vector3<float>(Vertex3D({0.f, 0.f, 0.f}) - origin);
-            TranslationMatrix centerTranslationMat(centerTranslationVec);
-            RotationMatrix rotationMat(normalizedRotationQ);
-            TranslationMatrix originTranslationMat(origin);
-
-            Vector4<float> rotatedP = Vector4<float>(originTranslationMat * rotationMat * centerTranslationMat * p.toHomogeneous());
-
-            return {rotatedP.x(), rotatedP.y(), rotatedP.z()};
-        }
 
     }; // Mesh
 

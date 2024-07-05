@@ -24,10 +24,12 @@ namespace Custosh::Renderer
         WindowsConsoleScreenBuffer g_hostActiveBuf;
         WindowsConsoleScreenBuffer g_hostInactiveBuf;
         HostPtr<char> g_hostCharHostPtr(BASE_DEV_WSPACE_SIZE);
+        HostPtr<TransformMatrix> g_hostTransformationHostPtr(BASE_DEV_WSPACE_SIZE);
 
         /* Device working space pointers */
         DevPtr<Vertex3D> g_hostVertex3DDevPtr(BASE_DEV_WSPACE_SIZE);
         DevPtr<triangleIndices_t> g_hostIndexDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<TransformMatrix> g_hostTransformationDevPtr(BASE_DEV_WSPACE_SIZE);
         DevPtr<Vertex2D> g_hostVertex2DDevPtr(BASE_DEV_WSPACE_SIZE);
         DevPtr<boundingBox_t> g_hostBoundingBoxDevPtr(BASE_DEV_WSPACE_SIZE);
         DevPtr<float> g_hostTriangleCross2DDevPtr(BASE_DEV_WSPACE_SIZE);
@@ -171,14 +173,19 @@ namespace Custosh::Renderer
 
         /* Kernels */
         // TODO: vertex manipulation (translation, rotation, etc.)
-        __global__ void vertexShader(const Vertex3D* vertex3DPtr,
+        __global__ void vertexShader(Vertex3D* vertex3DPtr,
                                      unsigned int numVertices,
+                                     const TransformMatrix* transformMatPtr,
                                      PerspectiveProjMatrix ppm,
                                      Vertex2D* vertex2DPtr)
         {
             const unsigned int i = threadIdx.x;
 
             if (i >= numVertices) { return; }
+
+            Vector4<float> vertex4D = Vector4<float>(transformMatPtr[i] * vertex3DPtr[i].toHomogeneous()).normalizeW();
+
+            vertex3DPtr[i] = {vertex4D.x(), vertex4D.y(), vertex4D.z()};
 
             vertex2DPtr[i] = applyPerspective(vertex3DPtr[i], ppm);
         }
@@ -277,6 +284,8 @@ namespace Custosh::Renderer
         {
             g_hostVertex3DDevPtr.resizeAndDiscardData(numVertices);
             g_hostVertex2DDevPtr.resizeAndDiscardData(numVertices);
+            g_hostTransformationDevPtr.resizeAndDiscardData(numVertices);
+            g_hostTransformationHostPtr.resizeAndDiscardData(numVertices);
 
             g_hostIndexDevPtr.resizeAndDiscardData(numTriangles);
             g_hostBoundingBoxDevPtr.resizeAndDiscardData(numTriangles);
@@ -299,6 +308,7 @@ namespace Custosh::Renderer
 
             vertexShader<<<numBlocks, threadsPerBlock>>>(g_hostVertex3DDevPtr.get(),
                                                          numVertices,
+                                                         g_hostTransformationDevPtr.get(),
                                                          PPM,
                                                          g_hostVertex2DDevPtr.get());
             CUDA_CHECK(cudaGetLastError());
@@ -353,6 +363,17 @@ namespace Custosh::Renderer
 
         scene.verticesPtr().loadToDev(g_hostVertex3DDevPtr.get());
         scene.indicesPtr().loadToDev(g_hostIndexDevPtr.get());
+
+        loadTransformMat(TranslationMatrix({0.f, 0.f, 0.f}));
+    }
+
+    __host__ void loadTransformMat(const TransformMatrix& tm)
+    {
+        for (unsigned int i = 0; i < g_hostTransformationHostPtr.size(); ++i) {
+            g_hostTransformationHostPtr.get()[i] = tm;
+        }
+
+        g_hostTransformationHostPtr.loadToDev(g_hostTransformationDevPtr.get());
     }
 
     __host__ void draw(const lightSource_t& ls)

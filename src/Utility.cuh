@@ -45,8 +45,6 @@ do { \
 #define HOST_DEV_GETTER __host__ __device__ inline
 #define HOST_GETTER __host__ inline
 
-#define DARR_BASE_SIZE 8
-
 namespace Custosh
 {
     /* Functions */
@@ -467,6 +465,11 @@ namespace Custosh
             return m_realPart * m_realPart + m_imaginaryVec.normSq();
         }
 
+        [[nodiscard]] __host__ __device__ Quaternion normalized() const
+        {
+            return (*this) * (1.f / sqrt(this->normSq()));
+        }
+
         [[nodiscard]] HOST_DEV_GETTER T realPart() const
         { return m_realPart; }
 
@@ -540,7 +543,13 @@ namespace Custosh
     {
     public:
         __host__ __device__ explicit RotationMatrix(const Quaternion<float>& rotationQuaternion)
-                : Matrix<float, 4, 4>(init(rotationQuaternion))
+                : Matrix<float, 4, 4>(init(rotationQuaternion.normalized()))
+        {
+        }
+
+        __host__ __device__ RotationMatrix(const Vector3<float>& rotationVec, float angle)
+                : Matrix<float, 4, 4>(init({cos(angle / 2),
+                                            Vector3<float>(sin(angle / 2) * rotationVec.normalized())}))
         {
         }
 
@@ -559,6 +568,27 @@ namespace Custosh
         }
 
     }; // RotationMatrix
+
+    class DecentralizedTransformMatrix : public Matrix<float, 4, 4>
+    {
+    public:
+        __host__ __device__ DecentralizedTransformMatrix(const Matrix<float, 4, 4>& transformMat,
+                                                         const Vector3<float>& origin)
+                : Matrix<float, 4, 4>(init(transformMat, origin))
+        {
+        }
+
+    private:
+        __host__ __device__ static Matrix<float, 4, 4> init(const Matrix<float, 4, 4>& transformMat,
+                                                            const Vector3<float>& origin)
+        {
+            auto centerTranslationMat = TranslationMatrix(Vector3<float>(origin * -1));
+            auto originTranslationMat = TranslationMatrix(origin);
+
+            return originTranslationMat * transformMat * centerTranslationMat;
+        }
+
+    }; // DecentralizedRotationMatrix
 
     class OrtProjMatrix : public Matrix<float, 4, 4>
     {
@@ -787,6 +817,7 @@ namespace Custosh
     /* Aliases */
     using Vertex2D = Vector2<float>;
     using Vertex3D = Vector3<float>;
+    using TransformMatrix = Matrix<float, 4, 4>;
 
     /* Structs */
     struct triangle3D_t

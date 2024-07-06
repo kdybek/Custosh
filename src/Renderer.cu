@@ -385,8 +385,8 @@ namespace Custosh::Renderer
     {
         if (meshIdx >= g_firstVertexIdxPerMesh.size()) { throw CustoshException("invalid mesh index"); }
 
-        for (unsigned int i = g_firstVertexIdxPerMesh[meshIdx]; i < g_numVerticesPerMesh[meshIdx]; ++i) {
-            g_hostTransformationHostPtr.get()[i] = tm;
+        for (unsigned int i = 0; i < g_numVerticesPerMesh[meshIdx]; ++i) {
+            g_hostTransformationHostPtr.get()[i + g_firstVertexIdxPerMesh[meshIdx]] = tm;
         }
 
         g_hostTransformationHostPtr.loadToDev(g_hostTransformationDevPtr.get());

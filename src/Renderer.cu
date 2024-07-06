@@ -21,6 +21,8 @@ namespace Custosh::Renderer
         __constant__ const unsigned int g_devNumASCII = 94; // TODO: make sure it's right
 
         /* Host global variables */
+        std::vector<unsigned int> g_firstVertexIdxPerMesh;
+        std::vector<unsigned int> g_numVerticesPerMesh;
         WindowsConsoleScreenBuffer g_hostActiveBuf;
         WindowsConsoleScreenBuffer g_hostInactiveBuf;
         HostPtr<char> g_hostCharHostPtr(BASE_DEV_WSPACE_SIZE);
@@ -355,21 +357,35 @@ namespace Custosh::Renderer
             CUDA_CHECK(cudaGetLastError());
         }
 
+        __host__ void resetTransformMatrices()
+        {
+            for (unsigned int i = 0; i < g_hostTransformationHostPtr.size(); ++i) {
+                g_hostTransformationHostPtr.get()[i] = TranslationMatrix({0.f, 0.f, 0.f});
+            }
+
+            g_hostTransformationHostPtr.loadToDev(g_hostTransformationDevPtr.get());
+        }
+
     } // anonymous
 
     __host__ void loadScene(const Scene& scene)
     {
         resizeSceneDependentPtrs(scene.verticesPtr().size(), scene.indicesPtr().size());
 
+        g_firstVertexIdxPerMesh = scene.firstVertexIdxPerMeshVec();
+        g_numVerticesPerMesh = scene.numVerticesPerMeshVec();
+
         scene.verticesPtr().loadToDev(g_hostVertex3DDevPtr.get());
         scene.indicesPtr().loadToDev(g_hostIndexDevPtr.get());
 
-        loadTransformMat(TranslationMatrix({0.f, 0.f, 0.f}));
+        resetTransformMatrices();
     }
 
-    __host__ void loadTransformMat(const TransformMatrix& tm)
+    __host__ void loadTransformMatrix(const TransformMatrix& tm, unsigned int meshIdx)
     {
-        for (unsigned int i = 0; i < g_hostTransformationHostPtr.size(); ++i) {
+        if (meshIdx >= g_firstVertexIdxPerMesh.size()) { throw CustoshException("invalid mesh index"); }
+
+        for (unsigned int i = g_firstVertexIdxPerMesh[meshIdx]; i < g_numVerticesPerMesh[meshIdx]; ++i) {
             g_hostTransformationHostPtr.get()[i] = tm;
         }
 

@@ -10,16 +10,27 @@ using namespace Custosh;
 
 int main()
 {
-    std::vector<Vector3<float>> cubeVer;
-    cubeVer.push_back({-0.5, -0.5, 1.5});
-    cubeVer.push_back({0.5, -0.5, 1.5});
-    cubeVer.push_back({-0.5, 0.5, 1.5});
-    cubeVer.push_back({0.5, 0.5, 1.5});
+    std::vector<Vector3<float>> cube1Ver;
+    cube1Ver.push_back({-1, -0.5, 1.5});
+    cube1Ver.push_back({0, -0.5, 1.5});
+    cube1Ver.push_back({-1, 0.5, 1.5});
+    cube1Ver.push_back({0, 0.5, 1.5});
 
-    cubeVer.push_back({-0.5, -0.5, 2.5});
-    cubeVer.push_back({0.5, -0.5, 2.5});
-    cubeVer.push_back({-0.5, 0.5, 2.5});
-    cubeVer.push_back({0.5, 0.5, 2.5});
+    cube1Ver.push_back({-1, -0.5, 2.5});
+    cube1Ver.push_back({0, -0.5, 2.5});
+    cube1Ver.push_back({-1, 0.5, 2.5});
+    cube1Ver.push_back({0, 0.5, 2.5});
+
+    std::vector<Vector3<float>> cube2Ver;
+    cube2Ver.push_back({0, -0.5, 1.5});
+    cube2Ver.push_back({1, -0.5, 1.5});
+    cube2Ver.push_back({0, 0.5, 1.5});
+    cube2Ver.push_back({1, 0.5, 1.5});
+
+    cube2Ver.push_back({0, -0.5, 2.5});
+    cube2Ver.push_back({1, -0.5, 2.5});
+    cube2Ver.push_back({0, 0.5, 2.5});
+    cube2Ver.push_back({1, 0.5, 2.5});
 
     std::vector<triangleIndices_t> cubeInd;
     cubeInd.emplace_back(0, 2, 3);
@@ -37,7 +48,8 @@ int main()
     cubeInd.emplace_back(0, 1, 5);
     cubeInd.emplace_back(5, 4, 0);
 
-    Mesh cube(cubeVer, cubeInd);
+    Mesh cube1(cube1Ver, cubeInd);
+    Mesh cube2(cube2Ver, cubeInd);
 
     lightSource_t ls({0, 0, 0}, 0.5);
 
@@ -53,15 +65,16 @@ int main()
 
     Scene scene;
 
-    scene.add(cube);
+    scene.add(cube1);
+    scene.add(cube2);
 
     Renderer::loadScene(scene);
 
-    TransformMatrix rotatioMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1), origin);
-    TransformMatrix rotatioMat2 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle2), origin);
-    TransformMatrix rotatioMat3 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle3), origin);
+    TransformMatrix rotationMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1), origin);
+    TransformMatrix rotationMat2 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle2), origin);
+    TransformMatrix rotationMat3 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle3), origin);
 
-    Renderer::loadTransformMat(rotatioMat1 * rotatioMat2 * rotatioMat3);
+    Renderer::loadTransformMatrix(rotationMat1 * rotationMat2 * rotationMat3, 0);
 
     while (true) {
         auto start = std::chrono::high_resolution_clock::now();

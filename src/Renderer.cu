@@ -395,7 +395,12 @@ namespace Custosh::Renderer
 
     __host__ void setLightSource(const lightSource_t& ls)
     {
-        cudaMemcpyToSymbol(g_devLightSource, &ls, sizeof(lightSource_t));
+        CUDA_CHECK(cudaMemcpyToSymbol(g_devLightSource, &ls, sizeof(lightSource_t)));
+    }
+
+    __host__ void setCameraTransformMatrix(const TransformMatrix& tm)
+    {
+        CUDA_CHECK(cudaMemcpyToSymbol(g_devCameraTransformMat, &tm, sizeof(TransformMatrix)));
     }
 
     __host__ void draw()

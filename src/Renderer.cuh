@@ -12,6 +12,8 @@ namespace Custosh::Renderer
 
     __host__ void setLightSource(const lightSource_t& ls);
 
+    __host__ void setCameraTransformMatrix(const TransformMatrix& tm);
+
     __host__ void draw();
 
 } // Custosh::Renderer

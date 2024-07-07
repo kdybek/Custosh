@@ -1,5 +1,5 @@
-#ifndef CUSTOSH_WINDOWSCONSOLESCREENBUFFER_H
-#define CUSTOSH_WINDOWSCONSOLESCREENBUFFER_H
+#ifndef CUSTOSH_WINDOWS_CONSOLE_SCREEN_BUFFER_H
+#define CUSTOSH_WINDOWS_CONSOLE_SCREEN_BUFFER_H
 
 
 #define NOMINMAX
@@ -7,8 +7,8 @@
 #include <windows.h>
 #include <iostream>
 
-#include "CustoshExcept.h"
-#include "Utility.cuh"
+#include "custosh_except.h"
+#include "utility.cuh"
 
 namespace Custosh
 {
@@ -87,4 +87,4 @@ namespace Custosh
 }
 
 
-#endif // CUSTOSH_WINDOWSCONSOLESCREENBUFFER_H
+#endif // CUSTOSH_WINDOWS_CONSOLE_SCREEN_BUFFER_H

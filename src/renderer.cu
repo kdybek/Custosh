@@ -1,6 +1,6 @@
-#include "Renderer.cuh"
+#include "renderer.h"
 
-#include "WindowsConsoleScreenBuffer.h"
+#include "windows_console_screen_buffer.h"
 
 namespace Custosh::Renderer
 {

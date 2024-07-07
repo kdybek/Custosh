@@ -1,5 +1,5 @@
-#ifndef CUSTOSH_CUSTOSHEXCEPT_H
-#define CUSTOSH_CUSTOSHEXCEPT_H
+#ifndef CUSTOSH_CUSTOSH_EXCEPT_H
+#define CUSTOSH_CUSTOSH_EXCEPT_H
 
 
 #include <exception>
@@ -29,4 +29,4 @@ namespace Custosh
 } // Custosh
 
 
-#endif // CUSTOSH_CUSTOSHEXCEPT_H
+#endif // CUSTOSH_CUSTOSH_EXCEPT_H

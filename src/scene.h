@@ -2,7 +2,7 @@
 #define CUSTOSH_SCENE_H
 
 
-#include "Utility.cuh"
+#include "utility.cuh"
 
 namespace Custosh
 {

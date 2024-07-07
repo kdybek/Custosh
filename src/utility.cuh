@@ -9,7 +9,7 @@
 #include <numbers>
 #include <cuda_runtime.h>
 
-#include "CustoshExcept.h"
+#include "custosh_except.h"
 
 #define CUDA_CHECK(call) \
 do { \

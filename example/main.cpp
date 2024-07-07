@@ -3,8 +3,7 @@
 #include <thread>
 #include <algorithm>
 
-#include "Utility.cuh"
-#include "Renderer.cuh"
+#include "custosh.h"
 
 using namespace Custosh;
 

@@ -9,6 +9,7 @@ add_executable(Custosh
         src/Renderer.cu
         src/Renderer.cuh
         src/Scene.h
+        src/GPUMemoryManager.h
 )
 
 set_target_properties(Custosh PROPERTIES

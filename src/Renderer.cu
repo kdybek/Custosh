@@ -2,41 +2,48 @@
 
 #include "WindowsConsoleScreenBuffer.h"
 
-#define BASE_DEV_WSPACE_SIZE 8
-#define CCV_MIN_CORNER {-1.f, -1.f, -1.f}
-#define CCV_MAX_CORNER {1.f, 1.f, 1.f}
-#define PM_NEAR_PLANE 1.f
-#define PM_FAR_PLANE 10.f
-#define MAX_THREADS_PER_BLOCK 256
-#define THREADS_PER_BLOCK_X 16
-#define THREADS_PER_BLOCK_Y 16
-
 namespace Custosh::Renderer
 {
     namespace
     {
+        /* Host constants */
+        constexpr unsigned int BASE_DEV_WSPACE_SIZE = 8;
+        constexpr Vertex3D CCV_MIN_CORNER = {-1.f, -1.f, -1.f};
+        constexpr Vertex3D CCV_MAX_CORNER = {1.f, 1.f, 1.f};
+        constexpr float PM_NEAR_PLANE = 1.f;
+        constexpr float PM_FAR_PLANE = 10.f;
+        constexpr unsigned int THREADS_PER_BLOCK = 256;
+        constexpr unsigned int THREADS_PER_BLOCK_X = 16;
+        constexpr unsigned int THREADS_PER_BLOCK_Y = 16;
+        constexpr TransformMatrix IDENTITY_MAT = {{1.f, 0.f, 0.f, 0.f},
+                                                  {0.f, 1.f, 0.f, 0.f},
+                                                  {0.f, 0.f, 1.f, 0.f},
+                                                  {0.f, 0.f, 0.f, 1.f}};
+
         /* Device global variables */
         __constant__ const char* g_devASCIIByBrightness =
                 R"( `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@)";
-        __constant__ const unsigned int g_devNumASCII = 94; // TODO: make sure it's right
+        __constant__ const unsigned int g_devNumASCII = 92;
+        __constant__ TransformMatrix g_devCameraTransformMat = IDENTITY_MAT;
+        __constant__ lightSource_t g_devLightSource;
 
         /* Host global variables */
         std::vector<unsigned int> g_firstVertexIdxPerMesh;
         std::vector<unsigned int> g_numVerticesPerMesh;
-        WindowsConsoleScreenBuffer g_hostActiveBuf;
-        WindowsConsoleScreenBuffer g_hostInactiveBuf;
-        HostPtr<char> g_hostCharHostPtr(BASE_DEV_WSPACE_SIZE);
-        HostPtr<TransformMatrix> g_hostTransformationHostPtr(BASE_DEV_WSPACE_SIZE);
+        WindowsConsoleScreenBuffer g_activeBuf;
+        WindowsConsoleScreenBuffer g_inactiveBuf;
+        HostPtr<char> g_charHostPtr(BASE_DEV_WSPACE_SIZE);
+        HostPtr<TransformMatrix> g_transformHostPtr(BASE_DEV_WSPACE_SIZE);
 
         /* Device working space pointers */
-        DevPtr<Vertex3D> g_hostVertex3DDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<triangleIndices_t> g_hostIndexDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<TransformMatrix> g_hostTransformationDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<Vertex2D> g_hostVertex2DDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<boundingBox_t> g_hostBoundingBoxDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<float> g_hostTriangleCross2DDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<Vector3<float>> g_hostTriangleNormalDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<char> g_hostCharDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<Vertex3D> g_vertex3DDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<triangleIndices_t> g_triangleDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<TransformMatrix> g_transformDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<Vertex2D> g_vertex2DDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<boundingBox_t> g_boundingBoxDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<float> g_triangleCross2DDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<Vector3<float>> g_triangleNormalDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<char> g_charDevPtr(BASE_DEV_WSPACE_SIZE);
 
         /* Device auxiliary functions */
         [[nodiscard]] __device__ char brightnessToASCII(float brightness)
@@ -118,13 +125,6 @@ namespace Custosh::Renderer
             return (w0 >= 0.f && w1 >= 0.f && w2 >= 0.f);
         }
 
-        [[nodiscard]] __device__ Vertex2D applyPerspective(const Vertex3D& p,
-                                                           const PerspectiveProjMatrix& ppm)
-        {
-            Vector4<float> pPerspective = Vector4<float>(ppm * p.toHomogeneous()).normalizeW();
-            return {pPerspective.x(), pPerspective.y()};
-        }
-
         [[nodiscard]] __device__ Vertex3D getCartesianCoords(const triangle3D_t& triangle3D,
                                                              const barycentricCoords_t& bc)
         {
@@ -185,11 +185,15 @@ namespace Custosh::Renderer
 
             if (i >= numVertices) { return; }
 
-            Vector4<float> vertex4D = Vector4<float>(transformMatPtr[i] * vertex3DPtr[i].toHomogeneous()).normalizeW();
+            Vector4<float> updatedVertex4D = Vector4<float>(transformMatPtr[i] *
+                                                            vertex3DPtr[i].toHomogeneous()).normalizeW();
 
-            vertex3DPtr[i] = {vertex4D.x(), vertex4D.y(), vertex4D.z()};
+            Vector4<float> vertex4DPerspective = Vector4<float>(ppm *
+                                                                g_devCameraTransformMat *
+                                                                updatedVertex4D).normalizeW();
 
-            vertex2DPtr[i] = applyPerspective(vertex3DPtr[i], ppm);
+            vertex3DPtr[i] = {updatedVertex4D.x(), updatedVertex4D.y(), updatedVertex4D.z()};
+            vertex2DPtr[i] = {vertex4DPerspective.x(), vertex4DPerspective.y()};
         }
 
         __global__ void geometryShader(triangleIndices_t* indexPtr,
@@ -231,7 +235,6 @@ namespace Custosh::Renderer
                                        const float* cross2DPtr,
                                        const Vector3<float>* normalPtr,
                                        const boundingBox_t* boundingBoxPtr,
-                                       lightSource_t ls,
                                        char* characters)
         {
             const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -267,7 +270,7 @@ namespace Custosh::Renderer
             }
 
             if (fragment.occupied) {
-                characters[y * cols + x] = brightnessToASCII(pointBrightness(fragment, ls));
+                characters[y * cols + x] = brightnessToASCII(pointBrightness(fragment, g_devLightSource));
             }
             else { characters[y * cols + x] = brightnessToASCII(0.f); }
         }
@@ -284,60 +287,59 @@ namespace Custosh::Renderer
 
         __host__ void resizeSceneDependentPtrs(unsigned int numVertices, unsigned int numTriangles)
         {
-            g_hostVertex3DDevPtr.resizeAndDiscardData(numVertices);
-            g_hostVertex2DDevPtr.resizeAndDiscardData(numVertices);
-            g_hostTransformationDevPtr.resizeAndDiscardData(numVertices);
-            g_hostTransformationHostPtr.resizeAndDiscardData(numVertices);
+            g_vertex3DDevPtr.resizeAndDiscardData(numVertices);
+            g_vertex2DDevPtr.resizeAndDiscardData(numVertices);
+            g_transformDevPtr.resizeAndDiscardData(numVertices);
+            g_transformHostPtr.resizeAndDiscardData(numVertices);
 
-            g_hostIndexDevPtr.resizeAndDiscardData(numTriangles);
-            g_hostBoundingBoxDevPtr.resizeAndDiscardData(numTriangles);
-            g_hostTriangleCross2DDevPtr.resizeAndDiscardData(numTriangles);
-            g_hostTriangleNormalDevPtr.resizeAndDiscardData(numTriangles);
+            g_triangleDevPtr.resizeAndDiscardData(numTriangles);
+            g_boundingBoxDevPtr.resizeAndDiscardData(numTriangles);
+            g_triangleCross2DDevPtr.resizeAndDiscardData(numTriangles);
+            g_triangleNormalDevPtr.resizeAndDiscardData(numTriangles);
         }
 
         __host__ void resizeScreenDependentPtrs(unsigned int windowRows, unsigned int windowCols)
         {
-            g_hostCharHostPtr.resizeAndDiscardData(windowRows * windowCols);
-            g_hostCharDevPtr.resizeAndDiscardData(windowRows * windowCols);
+            g_charHostPtr.resizeAndDiscardData(windowRows * windowCols);
+            g_charDevPtr.resizeAndDiscardData(windowRows * windowCols);
         }
 
         __host__ void callVertexShader(const PerspectiveProjMatrix& PPM)
         {
-            unsigned int numVertices = g_hostVertex3DDevPtr.size();
+            unsigned int numVertices = g_vertex3DDevPtr.size();
 
-            unsigned int threadsPerBlock = std::min(numVertices, static_cast<unsigned int>(MAX_THREADS_PER_BLOCK));
+            unsigned int threadsPerBlock = std::min(numVertices, static_cast<unsigned int>(THREADS_PER_BLOCK));
             unsigned int numBlocks = (numVertices + threadsPerBlock - 1) / threadsPerBlock;
 
-            vertexShader<<<numBlocks, threadsPerBlock>>>(g_hostVertex3DDevPtr.get(),
+            vertexShader<<<numBlocks, threadsPerBlock>>>(g_vertex3DDevPtr.get(),
                                                          numVertices,
-                                                         g_hostTransformationDevPtr.get(),
+                                                         g_transformDevPtr.get(),
                                                          PPM,
-                                                         g_hostVertex2DDevPtr.get());
+                                                         g_vertex2DDevPtr.get());
             CUDA_CHECK(cudaGetLastError());
         }
 
         __host__ void callGeometryShader()
         {
-            unsigned int numTriangles = g_hostIndexDevPtr.size();
+            unsigned int numTriangles = g_triangleDevPtr.size();
 
-            unsigned int threadsPerBlock = std::min(numTriangles, static_cast<unsigned int>(MAX_THREADS_PER_BLOCK));
+            unsigned int threadsPerBlock = std::min(numTriangles, THREADS_PER_BLOCK);
             unsigned int numBlocks = (numTriangles + threadsPerBlock - 1) / threadsPerBlock;
 
-            geometryShader<<<numBlocks, threadsPerBlock>>>(g_hostIndexDevPtr.get(),
+            geometryShader<<<numBlocks, threadsPerBlock>>>(g_triangleDevPtr.get(),
                                                            numTriangles,
-                                                           g_hostVertex2DDevPtr.get(),
-                                                           g_hostVertex3DDevPtr.get(),
-                                                           g_hostTriangleCross2DDevPtr.get(),
-                                                           g_hostTriangleNormalDevPtr.get(),
-                                                           g_hostBoundingBoxDevPtr.get());
+                                                           g_vertex2DDevPtr.get(),
+                                                           g_vertex3DDevPtr.get(),
+                                                           g_triangleCross2DDevPtr.get(),
+                                                           g_triangleNormalDevPtr.get(),
+                                                           g_boundingBoxDevPtr.get());
             CUDA_CHECK(cudaGetLastError());
         }
 
-        __host__ void callFragmentShader(const lightSource_t& ls,
-                                         unsigned int windowRows,
+        __host__ void callFragmentShader(unsigned int windowRows,
                                          unsigned int windowCols)
         {
-            unsigned int numTriangles = g_hostIndexDevPtr.size();
+            unsigned int numTriangles = g_triangleDevPtr.size();
 
             dim3 threadsPerBlock(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y);
             dim3 numBlocks((windowCols + threadsPerBlock.x - 1) / threadsPerBlock.x,
@@ -345,25 +347,24 @@ namespace Custosh::Renderer
 
             fragmentShader<<<numBlocks, threadsPerBlock>>>(windowRows,
                                                            windowCols,
-                                                           g_hostIndexDevPtr.get(),
+                                                           g_triangleDevPtr.get(),
                                                            numTriangles,
-                                                           g_hostVertex2DDevPtr.get(),
-                                                           g_hostVertex3DDevPtr.get(),
-                                                           g_hostTriangleCross2DDevPtr.get(),
-                                                           g_hostTriangleNormalDevPtr.get(),
-                                                           g_hostBoundingBoxDevPtr.get(),
-                                                           ls,
-                                                           g_hostCharDevPtr.get());
+                                                           g_vertex2DDevPtr.get(),
+                                                           g_vertex3DDevPtr.get(),
+                                                           g_triangleCross2DDevPtr.get(),
+                                                           g_triangleNormalDevPtr.get(),
+                                                           g_boundingBoxDevPtr.get(),
+                                                           g_charDevPtr.get());
             CUDA_CHECK(cudaGetLastError());
         }
 
         __host__ void resetTransformMatrices()
         {
-            for (unsigned int i = 0; i < g_hostTransformationHostPtr.size(); ++i) {
-                g_hostTransformationHostPtr.get()[i] = TranslationMatrix({0.f, 0.f, 0.f});
+            for (unsigned int i = 0; i < g_transformHostPtr.size(); ++i) {
+                g_transformHostPtr.get()[i] = IDENTITY_MAT;
             }
 
-            g_hostTransformationHostPtr.loadToDev(g_hostTransformationDevPtr.get());
+            g_transformHostPtr.loadToDev(g_transformDevPtr.get());
         }
 
     } // anonymous
@@ -375,8 +376,8 @@ namespace Custosh::Renderer
         g_firstVertexIdxPerMesh = scene.firstVertexIdxPerMeshVec();
         g_numVerticesPerMesh = scene.numVerticesPerMeshVec();
 
-        scene.verticesPtr().loadToDev(g_hostVertex3DDevPtr.get());
-        scene.indicesPtr().loadToDev(g_hostIndexDevPtr.get());
+        scene.verticesPtr().loadToDev(g_vertex3DDevPtr.get());
+        scene.indicesPtr().loadToDev(g_triangleDevPtr.get());
 
         resetTransformMatrices();
     }
@@ -386,15 +387,20 @@ namespace Custosh::Renderer
         if (meshIdx >= g_firstVertexIdxPerMesh.size()) { throw CustoshException("invalid mesh index"); }
 
         for (unsigned int i = 0; i < g_numVerticesPerMesh[meshIdx]; ++i) {
-            g_hostTransformationHostPtr.get()[i + g_firstVertexIdxPerMesh[meshIdx]] = tm;
+            g_transformHostPtr.get()[i + g_firstVertexIdxPerMesh[meshIdx]] = tm;
         }
 
-        g_hostTransformationHostPtr.loadToDev(g_hostTransformationDevPtr.get());
+        g_transformHostPtr.loadToDev(g_transformDevPtr.get());
     }
 
-    __host__ void draw(const lightSource_t& ls)
+    __host__ void setLightSource(const lightSource_t& ls)
     {
-        Vector2<unsigned int> windowDim = g_hostInactiveBuf.getWindowDimensions();
+        cudaMemcpyToSymbol(g_devLightSource, &ls, sizeof(lightSource_t));
+    }
+
+    __host__ void draw()
+    {
+        Vector2<unsigned int> windowDim = g_inactiveBuf.getWindowDimensions();
 
         windowDim.x() = std::min(windowDim.x(), windowDim.y());
         windowDim.y() = std::min(windowDim.x(), windowDim.y());
@@ -411,12 +417,12 @@ namespace Custosh::Renderer
 
         CUDA_CHECK(cudaDeviceSynchronize());
 
-        callFragmentShader(ls, windowDim.y(), windowDim.x());
+        callFragmentShader(windowDim.y(), windowDim.x());
 
-        g_hostCharDevPtr.loadToHost(g_hostCharHostPtr.get());
-        g_hostInactiveBuf.draw(g_hostCharHostPtr.get(), windowDim.y(), windowDim.x());
-        g_hostInactiveBuf.activate();
-        std::swap(g_hostActiveBuf, g_hostInactiveBuf);
+        g_charDevPtr.loadToHost(g_charHostPtr.get());
+        g_inactiveBuf.draw(g_charHostPtr.get(), windowDim.y(), windowDim.x());
+        g_inactiveBuf.activate();
+        std::swap(g_activeBuf, g_inactiveBuf);
     }
 
 } // Custosh::Renderer

@@ -51,7 +51,7 @@ int main()
     Mesh cube1(cube1Ver, cubeInd);
     Mesh cube2(cube2Ver, cubeInd);
 
-    lightSource_t ls({0, 0, 0}, 0.7);
+    lightSource_t ls({1, 0, 0}, 0.7);
 
     float rotationAngle1 = degreesToRadians(1.5);
     float rotationAngle2 = degreesToRadians(1);
@@ -71,6 +71,8 @@ int main()
 
     Renderer::loadScene(scene);
 
+    Renderer::setLightSource(ls);
+
     TransformMatrix rotationMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1), origin1);
     TransformMatrix rotationMat2 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle2), origin1);
     TransformMatrix rotationMat3 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle3), origin1);
@@ -86,7 +88,7 @@ int main()
     while (true) {
         auto start = std::chrono::high_resolution_clock::now();
 
-        Renderer::draw(ls);
+        Renderer::draw();
 
         auto end = std::chrono::high_resolution_clock::now();
 

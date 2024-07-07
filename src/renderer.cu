@@ -1,5 +1,6 @@
 #include "renderer.h"
 
+#include "gpu_mem_utils.h"
 #include "windows_console_screen_buffer.h"
 
 namespace Custosh::Renderer
@@ -371,13 +372,13 @@ namespace Custosh::Renderer
 
     __host__ void loadScene(const Scene& scene)
     {
-        resizeSceneDependentPtrs(scene.verticesPtr().size(), scene.indicesPtr().size());
+        resizeSceneDependentPtrs(scene.numVertices(), scene.numTriangles());
 
         g_firstVertexIdxPerMesh = scene.firstVertexIdxPerMeshVec();
         g_numVerticesPerMesh = scene.numVerticesPerMeshVec();
 
-        scene.verticesPtr().loadToDev(g_vertex3DDevPtr.get());
-        scene.indicesPtr().loadToDev(g_triangleDevPtr.get());
+        scene.loadVerticesToDev(g_vertex3DDevPtr.get());
+        scene.loadTrianglesToDev(g_triangleDevPtr.get());
 
         resetTransformMatrices();
     }

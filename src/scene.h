@@ -2,15 +2,15 @@
 #define CUSTOSH_SCENE_H
 
 
-#include "utility.cuh"
+#include "utility.h"
 
 namespace Custosh
 {
     class Mesh
     {
     public:
-        Mesh(std::vector<Vertex3D> vertices, std::vector<triangleIndices_t> indices)
-                : m_vertices(std::move(vertices)), m_triangles(std::move(indices))
+        Mesh(std::vector<Vertex3D> vertices, std::vector<triangleIndices_t> triangles)
+                : m_vertices(std::move(vertices)), m_triangles(std::move(triangles))
         {
         }
 
@@ -29,56 +29,28 @@ namespace Custosh
     class Scene
     {
     public:
-        Scene() : m_vertices(0), m_triangles(0), m_firstVertexIdxPerMesh(), m_numVerticesPerMesh()
-        {
-        }
+        Scene();
+
+        ~Scene();
 
         // Returns the mesh index withing the scene.
-        unsigned int add(const Mesh& mesh)
-        {
-            const unsigned int addedMeshIdx = m_firstVertexIdxPerMesh.size();
-            const unsigned int firstVertexIdx = m_vertices.size();
-            const unsigned int firstTriangleIdx = m_triangles.size();
+        unsigned int add(const Mesh& mesh);
 
-            m_firstVertexIdxPerMesh.push_back(firstVertexIdx);
-            m_numVerticesPerMesh.push_back(mesh.vertices().size());
+        void loadVerticesToDev(Vertex3D* devPtr) const;
 
-            m_vertices.resizeAndCopy(m_vertices.size() + mesh.vertices().size());
-            m_triangles.resizeAndCopy(m_triangles.size() + mesh.triangles().size());
+        void loadTrianglesToDev(triangleIndices_t* devPtr) const;
 
-            for (unsigned int i = firstVertexIdx; i < m_vertices.size(); ++i) {
-                m_vertices.get()[i] = mesh.vertices()[i - firstVertexIdx];
-            }
+        [[nodiscard]] unsigned int numVertices() const;
 
-            for (unsigned int i = firstTriangleIdx; i < m_triangles.size(); ++i) {
-                m_triangles.get()[i] = offsetTriangleIndices(mesh.triangles()[i - firstTriangleIdx], firstVertexIdx);
-            }
+        [[nodiscard]] unsigned int numTriangles() const;
 
-            return addedMeshIdx;
-        }
+        [[nodiscard]] const std::vector<unsigned int>& firstVertexIdxPerMeshVec() const;
 
-        [[nodiscard]] inline const HostPtr<Vertex3D>& verticesPtr() const
-        { return m_vertices; }
-
-        [[nodiscard]] inline const HostPtr<triangleIndices_t>& indicesPtr() const
-        { return m_triangles; }
-
-        [[nodiscard]] inline const std::vector<unsigned int>& firstVertexIdxPerMeshVec() const
-        { return m_firstVertexIdxPerMesh; }
-
-        [[nodiscard]] inline const std::vector<unsigned int>& numVerticesPerMeshVec() const
-        { return m_numVerticesPerMesh; }
+        [[nodiscard]] const std::vector<unsigned int>& numVerticesPerMeshVec() const;
 
     private:
-        HostPtr<Vertex3D> m_vertices;
-        HostPtr<triangleIndices_t> m_triangles;
-        std::vector<unsigned int> m_firstVertexIdxPerMesh;
-        std::vector<unsigned int> m_numVerticesPerMesh;
-
-        static triangleIndices_t offsetTriangleIndices(const triangleIndices_t& ti, unsigned int offset)
-        {
-            return triangleIndices_t(ti.p0 + offset, ti.p1 + offset, ti.p2 + offset);
-        }
+        class SceneImpl;
+        SceneImpl* m_implPtr;
 
     }; // Scene
 

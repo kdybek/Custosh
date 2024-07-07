@@ -1,5 +1,5 @@
 # Custosh
 
-A graphics library for 3D ASCII games. Example usage is showcased in main.cpp.
+A graphics library for 3D ASCII games. Example usage is showcased in the example folder.
 
 It works only on Windows and requires an NVIDIA GPU.

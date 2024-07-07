@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(custosh_lib LANGUAGES CUDA CXX)
+project(Custosh LANGUAGES CUDA CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -7,12 +7,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 include_directories(include)
 
 set(SOURCES
-        src/utility.cuh
+        src/scene.cpp
+        src/scene.h
+        src/utility.h
         src/custosh_except.h
         src/windows_console_screen_buffer.h
         src/renderer.cu
         src/renderer.h
-        src/scene.h
+        src/gpu_mem_utils.h
 )
 
 add_library(custosh_lib STATIC ${SOURCES})
@@ -28,7 +30,5 @@ target_include_directories(custosh_lib PRIVATE "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIR
 target_include_directories(custosh_lib PUBLIC include)
 
 add_executable(example example/main.cpp)
-
-target_include_directories(example PRIVATE "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 
 target_link_libraries(example custosh_lib)

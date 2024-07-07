@@ -8,7 +8,7 @@
 #include <iostream>
 
 #include "custosh_except.h"
-#include "utility.cuh"
+#include "utility.h"
 
 namespace Custosh
 {

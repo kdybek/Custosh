@@ -1,15 +1,14 @@
-#include "logger_manager.h"
+#include "logger.h"
 
 #include <iostream>
 #include <memory>
 #include <sstream>
-#include <fstream>
 #include <chrono>
 #include <cassert>
 
 #include "custosh_except.h"
 
-namespace custosh::loggerManager
+namespace custosh
 {
     namespace
     {
@@ -85,16 +84,20 @@ namespace custosh::loggerManager
         m_file << "[" << getCurrentTime() << "] " << logLevelToString(level) << ": " << message << '\n';
     }
 
-    void addLogger(const std::shared_ptr<Logger>& consoleLogger)
+    namespace loggerManager
     {
-        getLoggers().push_back(consoleLogger);
-    }
-
-    void log(LogLevel level, const std::string& message)
-    {
-        for (const auto& logger: getLoggers()) {
-            logger->log(level, message);
+        void addLogger(const std::shared_ptr<Logger>& consoleLogger)
+        {
+            getLoggers().push_back(consoleLogger);
         }
-    }
 
-} // custosh::loggerManager
+        void log(LogLevel level, const std::string& message)
+        {
+            for (const auto& logger: getLoggers()) {
+                logger->log(level, message);
+            }
+        }
+
+    } // loggerManager
+
+} // custosh

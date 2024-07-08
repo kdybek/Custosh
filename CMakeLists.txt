@@ -15,8 +15,8 @@ set(SOURCES
         src/renderer.cu
         src/renderer.h
         src/internal/gpu_memory.h
-        src/logger_manager.cpp
-        src/logger_manager.h
+        src/logger.cpp
+        src/logger.h
 )
 
 add_library(custosh_lib STATIC ${SOURCES})

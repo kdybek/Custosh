@@ -1,11 +1,11 @@
-#ifndef CUSTOSH_LOGGER_MANAGER_H
-#define CUSTOSH_LOGGER_MANAGER_H
+#ifndef CUSTOSH_LOGGER_H
+#define CUSTOSH_LOGGER_H
 
 
 #include <fstream>
 #include <string>
 
-namespace custosh::loggerManager
+namespace custosh
 {
     enum class LogLevel {
         TRACE,
@@ -49,11 +49,15 @@ namespace custosh::loggerManager
 
     }; // FileLogger
 
-    void addLogger(const std::shared_ptr<Logger>& consoleLogger);
+    namespace loggerManager
+    {
+        void addLogger(const std::shared_ptr<Logger>& consoleLogger);
 
-    void log(LogLevel level, const std::string& message);
+        void log(LogLevel level, const std::string& message);
 
-} // custosh::loggerManager
+    } // loggerManager
+
+} // custosh
 
 
-#endif // CUSTOSH_LOGGER_MANAGER_H
+#endif // CUSTOSH_LOGGER_H

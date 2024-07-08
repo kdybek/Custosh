@@ -2,7 +2,7 @@
 
 #include "internal/gpu_memory.h"
 
-namespace Custosh
+namespace custosh
 {
     class Scene::SceneImpl
     {
@@ -128,4 +128,4 @@ namespace Custosh
         return m_implPtr->lightSource();
     }
 
-} // Custosh
+} // custosh

@@ -3,7 +3,7 @@
 #include "internal/gpu_memory.h"
 #include "internal/windows_console_screen_buffer.h"
 
-namespace Custosh::Renderer
+namespace custosh::renderer
 {
     namespace
     {
@@ -110,6 +110,7 @@ namespace Custosh::Renderer
         /* @formatter:off */
 
         /* Host global variables */
+        // Preventing static initialization order fiasco.
         std::vector<unsigned int>& getFirstVertexIdxPerMesh() { static std::vector<unsigned int> s_firstVertexIdxPerMesh; return s_firstVertexIdxPerMesh; }
         std::vector<unsigned int>& getNumVerticesPerMesh() { static std::vector<unsigned int> s_numVerticesPerMesh; return s_numVerticesPerMesh; }
         WindowsConsoleScreenBuffer& getActiveBuf() { static WindowsConsoleScreenBuffer s_activeBuf; return s_activeBuf; }
@@ -130,6 +131,34 @@ namespace Custosh::Renderer
         /* @formatter:on */
 
         /* Device auxiliary functions */
+        template<typename T>
+        [[nodiscard]] __device__ T clamp(T a, T min, T max)
+        {
+            if (a < min) { return min; }
+            else if (a > max) { return max; }
+            else { return a; }
+        }
+
+        template<typename T>
+        [[nodiscard]] __device__ T max3(T a, T b, T c)
+        {
+            return max(max(a, b), c);
+        }
+
+        template<typename T>
+        [[nodiscard]] __device__ T min3(T a, T b, T c)
+        {
+            return min(min(a, b), c);
+        }
+
+        template<typename T>
+        __device__ void swap(T& a, T& b)
+        {
+            T temp = a;
+            a = b;
+            b = temp;
+        }
+
         [[nodiscard]] __device__ char brightnessToASCII(float brightness)
         {
             unsigned int idx = ceil(brightness * static_cast<float>(g_devNumASCII - 1));
@@ -488,11 +517,13 @@ namespace Custosh::Renderer
         windowDim.x() = std::min(windowDim.x(), windowDim.y());
         windowDim.y() = std::min(windowDim.x(), windowDim.y());
 
-        PerspectiveProjMatrix PPM = CCV2ScreenPPM(windowDim.y(), windowDim.x());
+        if (windowDim.x() == 0 || windowDim.y() == 0) { return; }
+
+        PerspectiveProjMatrix ppm = CCV2ScreenPPM(windowDim.y(), windowDim.x());
 
         resizeScreenDependentPtrs(windowDim.y(), windowDim.x());
 
-        callVertexShader(PPM);
+        callVertexShader(ppm);
 
         CUSTOSH_CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -508,4 +539,4 @@ namespace Custosh::Renderer
         std::swap(getActiveBuf(), getInactiveBuf());
     }
 
-} // Custosh::Renderer
+} // custosh::renderer

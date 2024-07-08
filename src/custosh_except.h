@@ -5,7 +5,7 @@
 #include <exception>
 #include <string>
 
-namespace Custosh
+namespace custosh
 {
     class CustoshException : public std::exception
     {
@@ -26,7 +26,7 @@ namespace Custosh
 
     }; // CustoshException
 
-} // Custosh
+} // custosh
 
 
 #endif // CUSTOSH_CUSTOSH_EXCEPT_H

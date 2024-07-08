@@ -5,7 +5,7 @@
 
 #include "custosh.h"
 
-using namespace Custosh;
+using namespace custosh;
 
 int init()
 {
@@ -68,7 +68,7 @@ int init()
     scene.add(cube1);
     scene.add(cube2);
 
-    Renderer::loadScene(scene);
+    renderer::loadScene(scene);
 
     TransformMatrix rotationMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1),
                                                                 origin1);
@@ -84,14 +84,14 @@ int init()
     TransformMatrix rotationMat6 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle3),
                                                                 origin2);
 
-    Renderer::loadTransformMatrix(rotationMat1 * rotationMat2 * rotationMat3, 0);
+    renderer::loadTransformMatrix(rotationMat1 * rotationMat2 * rotationMat3, 0);
 
-    Renderer::loadTransformMatrix(rotationMat4 * rotationMat5 * rotationMat6, 1);
+    renderer::loadTransformMatrix(rotationMat4 * rotationMat5 * rotationMat6, 1);
 
-    while (true) {
+    for (int i = 0; i < 500; ++i) {
         auto start = std::chrono::high_resolution_clock::now();
 
-        Renderer::draw();
+        renderer::draw();
 
         auto end = std::chrono::high_resolution_clock::now();
 
@@ -110,7 +110,6 @@ namespace
 
 int main()
 {
-    return 0;
 }
 
 // TODO: logging

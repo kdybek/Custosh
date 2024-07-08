@@ -18,7 +18,7 @@ do { \
     } \
 } while (0)
 
-namespace Custosh
+namespace custosh
 {
     template<typename T>
     class HostPtr
@@ -188,7 +188,7 @@ namespace Custosh
 
     }; // DevPtr
 
-} // Custosh
+} // custosh
 
 
 #endif // CUSTOSH_GPU_MEMORY_H

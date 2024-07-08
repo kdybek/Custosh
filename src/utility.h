@@ -1,5 +1,5 @@
-#ifndef CUSTOSH_UTILS_H
-#define CUSTOSH_UTILS_H
+#ifndef CUSTOSH_UTILITY_H
+#define CUSTOSH_UTILITY_H
 
 
 #include <string>
@@ -43,40 +43,12 @@
 #define CUSTOSH_HOST_DEV_MEMBER CUSTOSH_IF_CUDACC(__host__ __device__) constexpr
 #define CUSTOSH_HOST_DEV_GETTER CUSTOSH_IF_CUDACC(__host__ __device__) inline constexpr
 
-namespace Custosh
+namespace custosh
 {
     /* Functions */
     [[nodiscard]] CUSTOSH_HOST_DEV_AUX_FUNC float degreesToRadians(float degrees)
     {
         return degrees * (std::numbers::pi_v<float> / 180.f);
-    }
-
-    template<typename T>
-    [[nodiscard]] CUSTOSH_HOST_DEV_AUX_FUNC T clamp(T a, T min, T max)
-    {
-        if (a < min) { return min; }
-        else if (a > max) { return max; }
-        else { return a; }
-    }
-
-    template<typename T>
-    [[nodiscard]] CUSTOSH_HOST_DEV_AUX_FUNC T max3(T a, T b, T c)
-    {
-        return max(max(a, b), c);
-    }
-
-    template<typename T>
-    [[nodiscard]] CUSTOSH_HOST_DEV_AUX_FUNC T min3(T a, T b, T c)
-    {
-        return min(min(a, b), c);
-    }
-
-    template<typename T>
-    CUSTOSH_HOST_DEV_AUX_FUNC void swap(T& a, T& b)
-    {
-        T temp = a;
-        a = b;
-        b = temp;
     }
 
     /* Classes */
@@ -678,7 +650,7 @@ namespace Custosh
         }
     };
 
-} // Custosh
+} // custosh
 
 #undef CUSTOSH_IF_CUDACC
 #undef CUSTOSH_HOST_DEV_ERR
@@ -689,4 +661,4 @@ namespace Custosh
 #undef CUSTOSH_HOST_DEV_GETTER
 
 
-#endif // CUSTOSH_UTILS_H
+#endif // CUSTOSH_UTILITY_H

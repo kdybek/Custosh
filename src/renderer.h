@@ -4,7 +4,7 @@
 
 #include "scene.h"
 
-namespace Custosh::Renderer
+namespace custosh::renderer
 {
     void loadScene(const Scene& scene);
 
@@ -12,7 +12,7 @@ namespace Custosh::Renderer
 
     void draw();
 
-} // Custosh::Renderer
+} // custosh::renderer
 
 
 #endif // CUSTOSH_RENDERER_H

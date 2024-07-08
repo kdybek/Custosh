@@ -2,9 +2,9 @@
 #define CUSTOSH_SCENE_H
 
 
-#include "utils.h"
+#include "utility.h"
 
-namespace Custosh
+namespace custosh
 {
     class Mesh
     {
@@ -51,12 +51,13 @@ namespace Custosh
         [[nodiscard]] const lightSource_t& lightSource() const;
 
     private:
+        // Hiding the hostPtr class.
         class SceneImpl;
         SceneImpl* m_implPtr;
 
     }; // Scene
 
-} // Custosh
+} // custosh
 
 
 #endif // CUSTOSH_SCENE_H

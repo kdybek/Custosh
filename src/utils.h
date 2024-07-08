@@ -650,36 +650,6 @@ namespace Custosh
     using TransformMatrix = Matrix<float, 4, 4>;
 
     /* Structs */
-    struct triangle3D_t
-    {
-        Vertex3D p0;
-        Vertex3D p1;
-        Vertex3D p2;
-
-        CUSTOSH_HOST_DEV_MEMBER explicit triangle3D_t(
-                const Vertex3D& p0 = Vertex3D(),
-                const Vertex3D& p1 = Vertex3D(),
-                const Vertex3D& p2 = Vertex3D()
-        ) : p0(p0), p1(p1), p2(p2)
-        {
-        }
-    };
-
-    struct triangle2D_t
-    {
-        Vertex2D p0;
-        Vertex2D p1;
-        Vertex2D p2;
-
-        CUSTOSH_HOST_DEV_MEMBER explicit triangle2D_t(
-                const Vertex2D& p0 = Vertex2D(),
-                const Vertex2D& p1 = Vertex2D(),
-                const Vertex2D& p2 = Vertex2D()
-        ) : p0(p0), p1(p1), p2(p2)
-        {
-        }
-    };
-
     struct triangleIndices_t
     {
         unsigned int p0;
@@ -691,53 +661,6 @@ namespace Custosh
                 unsigned int p1 = 0,
                 unsigned int p2 = 0
         ) : p0(p0), p1(p1), p2(p2)
-        {
-        }
-    };
-
-    struct boundingBox_t
-    {
-        float xMax;
-        float xMin;
-        float yMax;
-        float yMin;
-
-        CUSTOSH_HOST_DEV_MEMBER explicit boundingBox_t(
-                float xMax = 0.f,
-                float xMin = 0.f,
-                float yMax = 0.f,
-                float yMin = 0.f
-        ) : xMax(xMax), xMin(xMin), yMax(yMax), yMin(yMin)
-        {
-        }
-    };
-
-    struct barycentricCoords_t
-    {
-        float alpha;
-        float beta;
-        float gamma;
-
-        CUSTOSH_HOST_DEV_MEMBER explicit barycentricCoords_t(
-                float alpha = 0.f,
-                float beta = 0.f,
-                float gamma = 0.f
-        ) : alpha(alpha), beta(beta), gamma(gamma)
-        {
-        }
-    };
-
-    struct fragment_t
-    {
-        bool occupied;
-        Vertex3D coords;
-        Vector3<float> normal;
-
-        CUSTOSH_HOST_DEV_MEMBER explicit fragment_t(
-                bool occupied = false,
-                const Vertex3D& coords = Vertex3D(),
-                const Vector3<float>& normal = Vector3<float>()
-        ) : occupied(occupied), coords(coords), normal(normal)
         {
         }
     };

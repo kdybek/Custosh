@@ -7,6 +7,84 @@ namespace Custosh::Renderer
 {
     namespace
     {
+        /* Auxiliary structs */
+        struct triangle3D_t
+        {
+            Vertex3D p0;
+            Vertex3D p1;
+            Vertex3D p2;
+
+            __host__ __device__ explicit triangle3D_t(
+                    const Vertex3D& p0 = Vertex3D(),
+                    const Vertex3D& p1 = Vertex3D(),
+                    const Vertex3D& p2 = Vertex3D()
+            ) : p0(p0), p1(p1), p2(p2)
+            {
+            }
+        };
+
+        struct triangle2D_t
+        {
+            Vertex2D p0;
+            Vertex2D p1;
+            Vertex2D p2;
+
+            __host__ __device__ explicit triangle2D_t(
+                    const Vertex2D& p0 = Vertex2D(),
+                    const Vertex2D& p1 = Vertex2D(),
+                    const Vertex2D& p2 = Vertex2D()
+            ) : p0(p0), p1(p1), p2(p2)
+            {
+            }
+        };
+
+        struct boundingBox_t
+        {
+            float xMax;
+            float xMin;
+            float yMax;
+            float yMin;
+
+            __host__ __device__ explicit boundingBox_t(
+                    float xMax = 0.f,
+                    float xMin = 0.f,
+                    float yMax = 0.f,
+                    float yMin = 0.f
+            ) : xMax(xMax), xMin(xMin), yMax(yMax), yMin(yMin)
+            {
+            }
+        };
+
+        struct barycentricCoords_t
+        {
+            float alpha;
+            float beta;
+            float gamma;
+
+            __host__ __device__ explicit barycentricCoords_t(
+                    float alpha = 0.f,
+                    float beta = 0.f,
+                    float gamma = 0.f
+            ) : alpha(alpha), beta(beta), gamma(gamma)
+            {
+            }
+        };
+
+        struct fragment_t
+        {
+            bool occupied;
+            Vertex3D coords;
+            Vector3<float> normal;
+
+            __host__ __device__ explicit fragment_t(
+                    bool occupied = false,
+                    const Vertex3D& coords = Vertex3D(),
+                    const Vector3<float>& normal = Vector3<float>()
+            ) : occupied(occupied), coords(coords), normal(normal)
+            {
+            }
+        };
+
         /* Host constants */
         constexpr unsigned int BASE_DEV_WSPACE_SIZE = 8;
         constexpr Vertex3D CCV_MIN_CORNER = {-1.f, -1.f, -1.f};
@@ -27,7 +105,6 @@ namespace Custosh::Renderer
         __constant__ constexpr unsigned int g_devNumASCII = 92;
 
         /* Device global variables */
-        __constant__ constinit TransformMatrix g_devCameraTransformMat = IDENTITY_MATRIX;
         __constant__ constinit lightSource_t g_devLightSource;
 
         /* @formatter:off */
@@ -194,9 +271,7 @@ namespace Custosh::Renderer
             Vector4<float> updatedVertex4D = Vector4<float>(transformMatPtr[i] *
                                                             vertex3DPtr[i].toHomogeneous()).normalizeW();
 
-            Vector4<float> vertex4DPerspective = Vector4<float>(ppm *
-                                                                g_devCameraTransformMat *
-                                                                updatedVertex4D).normalizeW();
+            Vector4<float> vertex4DPerspective = Vector4<float>(ppm * updatedVertex4D).normalizeW();
 
             vertex3DPtr[i] = {updatedVertex4D.x(), updatedVertex4D.y(), updatedVertex4D.z()};
             vertex2DPtr[i] = {vertex4DPerspective.x(), vertex4DPerspective.y()};
@@ -404,11 +479,6 @@ namespace Custosh::Renderer
         }
 
         getTransformHostPtr().loadToDev(getTransformDevPtr().get());
-    }
-
-    __host__ void setCameraTransformMatrix(const TransformMatrix& tm)
-    {
-        CUSTOSH_CUDA_CHECK(cudaMemcpyToSymbol(g_devCameraTransformMat, &tm, sizeof(TransformMatrix)));
     }
 
     __host__ void draw()

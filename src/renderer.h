@@ -10,8 +10,6 @@ namespace Custosh::Renderer
 
     void loadTransformMatrix(const TransformMatrix& tm, unsigned int meshIdx);
 
-    void setCameraTransformMatrix(const TransformMatrix& tm);
-
     void draw();
 
 } // Custosh::Renderer

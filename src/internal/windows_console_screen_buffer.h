@@ -4,11 +4,11 @@
 
 #define NOMINMAX
 
-#include <windows.h>
+#include <Windows.h>
 #include <iostream>
 
-#include "custosh_except.h"
-#include "utility.h"
+#include "../custosh_except.h"
+#include "../lib_utils.h"
 
 namespace Custosh
 {

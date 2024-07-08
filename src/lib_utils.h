@@ -1,5 +1,5 @@
-#ifndef CUSTOSH_UTILITY_H
-#define CUSTOSH_UTILITY_H
+#ifndef CUSTOSH_LIB_UTILS_H
+#define CUSTOSH_LIB_UTILS_H
 
 
 #include <string>
@@ -758,4 +758,4 @@ namespace Custosh
 } // Custosh
 
 
-#endif // CUSTOSH_UTILITY_H
+#endif // CUSTOSH_LIB_UTILS_H

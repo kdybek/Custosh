@@ -1,7 +1,7 @@
 #include "renderer.h"
 
-#include "gpu_mem_utils.h"
-#include "windows_console_screen_buffer.h"
+#include "internal/gpu_memory.h"
+#include "internal/windows_console_screen_buffer.h"
 
 namespace Custosh::Renderer
 {
@@ -16,35 +16,41 @@ namespace Custosh::Renderer
         constexpr unsigned int THREADS_PER_BLOCK = 256;
         constexpr unsigned int THREADS_PER_BLOCK_X = 16;
         constexpr unsigned int THREADS_PER_BLOCK_Y = 16;
-        constexpr TransformMatrix IDENTITY_MAT = {{1.f, 0.f, 0.f, 0.f},
-                                                  {0.f, 1.f, 0.f, 0.f},
-                                                  {0.f, 0.f, 1.f, 0.f},
-                                                  {0.f, 0.f, 0.f, 1.f}};
+        constexpr TransformMatrix IDENTITY_MATRIX = {{1.f, 0.f, 0.f, 0.f},
+                                                     {0.f, 1.f, 0.f, 0.f},
+                                                     {0.f, 0.f, 1.f, 0.f},
+                                                     {0.f, 0.f, 0.f, 1.f}};
+
+        /* Device constants */
+        __constant__ constexpr char g_devASCIIByBrightness[93] =
+                R"( `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@)";
+        __constant__ constexpr unsigned int g_devNumASCII = 92;
 
         /* Device global variables */
-        __constant__ const char* g_devASCIIByBrightness =
-                R"( `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@)";
-        __constant__ const unsigned int g_devNumASCII = 92;
-        __constant__ TransformMatrix g_devCameraTransformMat = IDENTITY_MAT;
-        __constant__ lightSource_t g_devLightSource;
+        __constant__ constinit TransformMatrix g_devCameraTransformMat = IDENTITY_MATRIX;
+        __constant__ constinit lightSource_t g_devLightSource;
+
+        /* @formatter:off */
 
         /* Host global variables */
-        std::vector<unsigned int> g_firstVertexIdxPerMesh;
-        std::vector<unsigned int> g_numVerticesPerMesh;
-        WindowsConsoleScreenBuffer g_activeBuf;
-        WindowsConsoleScreenBuffer g_inactiveBuf;
-        HostPtr<char> g_charHostPtr(BASE_DEV_WSPACE_SIZE);
-        HostPtr<TransformMatrix> g_transformHostPtr(BASE_DEV_WSPACE_SIZE);
+        std::vector<unsigned int>& getFirstVertexIdxPerMesh() { static std::vector<unsigned int> s_firstVertexIdxPerMesh; return s_firstVertexIdxPerMesh; }
+        std::vector<unsigned int>& getNumVerticesPerMesh() { static std::vector<unsigned int> s_numVerticesPerMesh; return s_numVerticesPerMesh; }
+        WindowsConsoleScreenBuffer& getActiveBuf() { static WindowsConsoleScreenBuffer s_activeBuf; return s_activeBuf; }
+        WindowsConsoleScreenBuffer& getInactiveBuf() { static WindowsConsoleScreenBuffer s_inactiveBuf; return s_inactiveBuf; }
+        HostPtr<char>& getCharHostPtr() { static HostPtr<char> s_charHostPtr(BASE_DEV_WSPACE_SIZE); return s_charHostPtr; }
+        HostPtr<TransformMatrix>& getTransformHostPtr() { static HostPtr<TransformMatrix> s_transformHostPtr(BASE_DEV_WSPACE_SIZE); return s_transformHostPtr; }
 
         /* Device working space pointers */
-        DevPtr<Vertex3D> g_vertex3DDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<triangleIndices_t> g_triangleDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<TransformMatrix> g_transformDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<Vertex2D> g_vertex2DDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<boundingBox_t> g_boundingBoxDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<float> g_triangleCross2DDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<Vector3<float>> g_triangleNormalDevPtr(BASE_DEV_WSPACE_SIZE);
-        DevPtr<char> g_charDevPtr(BASE_DEV_WSPACE_SIZE);
+        DevPtr<Vertex3D>& getVertex3DDevPtr() { static DevPtr<Vertex3D> s_vertex3DDevPtr(BASE_DEV_WSPACE_SIZE); return s_vertex3DDevPtr; }
+        DevPtr<triangleIndices_t>& getTriangleDevPtr() { static DevPtr<triangleIndices_t> s_triangleDevPtr(BASE_DEV_WSPACE_SIZE); return s_triangleDevPtr; }
+        DevPtr<TransformMatrix>& getTransformDevPtr() { static DevPtr<TransformMatrix> s_transformDevPtr(BASE_DEV_WSPACE_SIZE); return s_transformDevPtr; }
+        DevPtr<Vertex2D>& getVertex2DDevPtr() { static DevPtr<Vertex2D> s_vertex2DDevPtr(BASE_DEV_WSPACE_SIZE); return s_vertex2DDevPtr; }
+        DevPtr<boundingBox_t>& getBoundingBoxDevPtr() { static DevPtr<boundingBox_t> s_boundingBoxDevPtr(BASE_DEV_WSPACE_SIZE); return s_boundingBoxDevPtr; }
+        DevPtr<float>& getTriangleCross2DDevPtr() { static DevPtr<float> s_triangleCross2DDevPtr(BASE_DEV_WSPACE_SIZE); return s_triangleCross2DDevPtr; }
+        DevPtr<Vector3<float>>& getTriangleNormalDevPtr() { static DevPtr<Vector3<float>> s_triangleNormalDevPtr(BASE_DEV_WSPACE_SIZE); return s_triangleNormalDevPtr; }
+        DevPtr<char>& getCharDevPtr() { static DevPtr<char> s_charDevPtr(BASE_DEV_WSPACE_SIZE); return s_charDevPtr; }
+
+        /* @formatter:on */
 
         /* Device auxiliary functions */
         [[nodiscard]] __device__ char brightnessToASCII(float brightness)
@@ -175,7 +181,6 @@ namespace Custosh::Renderer
         }
 
         /* Kernels */
-        // TODO: vertex manipulation (translation, rotation, etc.)
         __global__ void vertexShader(Vertex3D* vertex3DPtr,
                                      unsigned int numVertices,
                                      const TransformMatrix* transformMatPtr,
@@ -288,59 +293,59 @@ namespace Custosh::Renderer
 
         __host__ void resizeSceneDependentPtrs(unsigned int numVertices, unsigned int numTriangles)
         {
-            g_vertex3DDevPtr.resizeAndDiscardData(numVertices);
-            g_vertex2DDevPtr.resizeAndDiscardData(numVertices);
-            g_transformDevPtr.resizeAndDiscardData(numVertices);
-            g_transformHostPtr.resizeAndDiscardData(numVertices);
+            getVertex3DDevPtr().resizeAndDiscardData(numVertices);
+            getVertex2DDevPtr().resizeAndDiscardData(numVertices);
+            getTransformDevPtr().resizeAndDiscardData(numVertices);
+            getTransformHostPtr().resizeAndDiscardData(numVertices);
 
-            g_triangleDevPtr.resizeAndDiscardData(numTriangles);
-            g_boundingBoxDevPtr.resizeAndDiscardData(numTriangles);
-            g_triangleCross2DDevPtr.resizeAndDiscardData(numTriangles);
-            g_triangleNormalDevPtr.resizeAndDiscardData(numTriangles);
+            getTriangleDevPtr().resizeAndDiscardData(numTriangles);
+            getBoundingBoxDevPtr().resizeAndDiscardData(numTriangles);
+            getTriangleCross2DDevPtr().resizeAndDiscardData(numTriangles);
+            getTriangleNormalDevPtr().resizeAndDiscardData(numTriangles);
         }
 
         __host__ void resizeScreenDependentPtrs(unsigned int windowRows, unsigned int windowCols)
         {
-            g_charHostPtr.resizeAndDiscardData(windowRows * windowCols);
-            g_charDevPtr.resizeAndDiscardData(windowRows * windowCols);
+            getCharHostPtr().resizeAndDiscardData(windowRows * windowCols);
+            getCharDevPtr().resizeAndDiscardData(windowRows * windowCols);
         }
 
         __host__ void callVertexShader(const PerspectiveProjMatrix& PPM)
         {
-            unsigned int numVertices = g_vertex3DDevPtr.size();
+            unsigned int numVertices = getVertex3DDevPtr().size();
 
             unsigned int threadsPerBlock = std::min(numVertices, static_cast<unsigned int>(THREADS_PER_BLOCK));
             unsigned int numBlocks = (numVertices + threadsPerBlock - 1) / threadsPerBlock;
 
-            vertexShader<<<numBlocks, threadsPerBlock>>>(g_vertex3DDevPtr.get(),
+            vertexShader<<<numBlocks, threadsPerBlock>>>(getVertex3DDevPtr().get(),
                                                          numVertices,
-                                                         g_transformDevPtr.get(),
+                                                         getTransformDevPtr().get(),
                                                          PPM,
-                                                         g_vertex2DDevPtr.get());
+                                                         getVertex2DDevPtr().get());
             CUDA_CHECK(cudaGetLastError());
         }
 
         __host__ void callGeometryShader()
         {
-            unsigned int numTriangles = g_triangleDevPtr.size();
+            unsigned int numTriangles = getTriangleDevPtr().size();
 
             unsigned int threadsPerBlock = std::min(numTriangles, THREADS_PER_BLOCK);
             unsigned int numBlocks = (numTriangles + threadsPerBlock - 1) / threadsPerBlock;
 
-            geometryShader<<<numBlocks, threadsPerBlock>>>(g_triangleDevPtr.get(),
+            geometryShader<<<numBlocks, threadsPerBlock>>>(getTriangleDevPtr().get(),
                                                            numTriangles,
-                                                           g_vertex2DDevPtr.get(),
-                                                           g_vertex3DDevPtr.get(),
-                                                           g_triangleCross2DDevPtr.get(),
-                                                           g_triangleNormalDevPtr.get(),
-                                                           g_boundingBoxDevPtr.get());
+                                                           getVertex2DDevPtr().get(),
+                                                           getVertex3DDevPtr().get(),
+                                                           getTriangleCross2DDevPtr().get(),
+                                                           getTriangleNormalDevPtr().get(),
+                                                           getBoundingBoxDevPtr().get());
             CUDA_CHECK(cudaGetLastError());
         }
 
         __host__ void callFragmentShader(unsigned int windowRows,
                                          unsigned int windowCols)
         {
-            unsigned int numTriangles = g_triangleDevPtr.size();
+            unsigned int numTriangles = getTriangleDevPtr().size();
 
             dim3 threadsPerBlock(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y);
             dim3 numBlocks((windowCols + threadsPerBlock.x - 1) / threadsPerBlock.x,
@@ -348,24 +353,29 @@ namespace Custosh::Renderer
 
             fragmentShader<<<numBlocks, threadsPerBlock>>>(windowRows,
                                                            windowCols,
-                                                           g_triangleDevPtr.get(),
+                                                           getTriangleDevPtr().get(),
                                                            numTriangles,
-                                                           g_vertex2DDevPtr.get(),
-                                                           g_vertex3DDevPtr.get(),
-                                                           g_triangleCross2DDevPtr.get(),
-                                                           g_triangleNormalDevPtr.get(),
-                                                           g_boundingBoxDevPtr.get(),
-                                                           g_charDevPtr.get());
+                                                           getVertex2DDevPtr().get(),
+                                                           getVertex3DDevPtr().get(),
+                                                           getTriangleCross2DDevPtr().get(),
+                                                           getTriangleNormalDevPtr().get(),
+                                                           getBoundingBoxDevPtr().get(),
+                                                           getCharDevPtr().get());
             CUDA_CHECK(cudaGetLastError());
         }
 
         __host__ void resetTransformMatrices()
         {
-            for (unsigned int i = 0; i < g_transformHostPtr.size(); ++i) {
-                g_transformHostPtr.get()[i] = IDENTITY_MAT;
+            for (unsigned int i = 0; i < getTransformHostPtr().size(); ++i) {
+                getTransformHostPtr().get()[i] = IDENTITY_MATRIX;
             }
 
-            g_transformHostPtr.loadToDev(g_transformDevPtr.get());
+            getTransformHostPtr().loadToDev(getTransformDevPtr().get());
+        }
+
+        __host__ void setLightSource(const lightSource_t& ls)
+        {
+            CUDA_CHECK(cudaMemcpyToSymbol(g_devLightSource, &ls, sizeof(lightSource_t)));
         }
 
     } // anonymous
@@ -374,29 +384,26 @@ namespace Custosh::Renderer
     {
         resizeSceneDependentPtrs(scene.numVertices(), scene.numTriangles());
 
-        g_firstVertexIdxPerMesh = scene.firstVertexIdxPerMeshVec();
-        g_numVerticesPerMesh = scene.numVerticesPerMeshVec();
+        getFirstVertexIdxPerMesh() = scene.firstVertexIdxPerMeshVec();
+        getNumVerticesPerMesh() = scene.numVerticesPerMeshVec();
 
-        scene.loadVerticesToDev(g_vertex3DDevPtr.get());
-        scene.loadTrianglesToDev(g_triangleDevPtr.get());
+        scene.loadVerticesToDev(getVertex3DDevPtr().get());
+        scene.loadTrianglesToDev(getTriangleDevPtr().get());
 
         resetTransformMatrices();
+
+        setLightSource(scene.lightSource());
     }
 
     __host__ void loadTransformMatrix(const TransformMatrix& tm, unsigned int meshIdx)
     {
-        if (meshIdx >= g_firstVertexIdxPerMesh.size()) { throw CustoshException("invalid mesh index"); }
+        if (meshIdx >= getFirstVertexIdxPerMesh().size()) { throw CustoshException("invalid mesh index"); }
 
-        for (unsigned int i = 0; i < g_numVerticesPerMesh[meshIdx]; ++i) {
-            g_transformHostPtr.get()[i + g_firstVertexIdxPerMesh[meshIdx]] = tm;
+        for (unsigned int i = 0; i < getNumVerticesPerMesh()[meshIdx]; ++i) {
+            getTransformHostPtr().get()[i + getFirstVertexIdxPerMesh()[meshIdx]] = tm;
         }
 
-        g_transformHostPtr.loadToDev(g_transformDevPtr.get());
-    }
-
-    __host__ void setLightSource(const lightSource_t& ls)
-    {
-        CUDA_CHECK(cudaMemcpyToSymbol(g_devLightSource, &ls, sizeof(lightSource_t)));
+        getTransformHostPtr().loadToDev(getTransformDevPtr().get());
     }
 
     __host__ void setCameraTransformMatrix(const TransformMatrix& tm)
@@ -406,7 +413,7 @@ namespace Custosh::Renderer
 
     __host__ void draw()
     {
-        Vector2<unsigned int> windowDim = g_inactiveBuf.getWindowDimensions();
+        Vector2<unsigned int> windowDim = getInactiveBuf().getWindowDimensions();
 
         windowDim.x() = std::min(windowDim.x(), windowDim.y());
         windowDim.y() = std::min(windowDim.x(), windowDim.y());
@@ -425,10 +432,10 @@ namespace Custosh::Renderer
 
         callFragmentShader(windowDim.y(), windowDim.x());
 
-        g_charDevPtr.loadToHost(g_charHostPtr.get());
-        g_inactiveBuf.draw(g_charHostPtr.get(), windowDim.y(), windowDim.x());
-        g_inactiveBuf.activate();
-        std::swap(g_activeBuf, g_inactiveBuf);
+        getCharDevPtr().loadToHost(getCharHostPtr().get());
+        getInactiveBuf().draw(getCharHostPtr().get(), windowDim.y(), windowDim.x());
+        getInactiveBuf().activate();
+        std::swap(getActiveBuf(), getInactiveBuf());
     }
 
 } // Custosh::Renderer

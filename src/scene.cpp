@@ -1,13 +1,18 @@
 #include "scene.h"
 
-#include "gpu_mem_utils.h"
+#include "internal/gpu_memory.h"
 
 namespace Custosh
 {
     class Scene::SceneImpl
     {
     public:
-        SceneImpl() : m_vertices(0), m_triangles(0), m_firstVertexIdxPerMesh(), m_numVerticesPerMesh()
+        explicit SceneImpl(const lightSource_t& ls)
+                : m_vertices(0),
+                  m_triangles(0),
+                  m_firstVertexIdxPerMesh(),
+                  m_numVerticesPerMesh(),
+                  m_lightSource(ls)
         {
         }
 
@@ -57,11 +62,15 @@ namespace Custosh
         [[nodiscard]] inline const std::vector<unsigned int>& numVerticesPerMeshVec() const
         { return m_numVerticesPerMesh; }
 
+        [[nodiscard]] inline const lightSource_t& lightSource() const
+        { return m_lightSource; }
+
     private:
         HostPtr<Vertex3D> m_vertices;
         HostPtr<triangleIndices_t> m_triangles;
         std::vector<unsigned int> m_firstVertexIdxPerMesh;
         std::vector<unsigned int> m_numVerticesPerMesh;
+        lightSource_t m_lightSource;
 
         static triangleIndices_t offsetTriangleIndices(const triangleIndices_t& ti, unsigned int offset)
         {
@@ -70,7 +79,7 @@ namespace Custosh
 
     }; // Scene::SceneImpl
 
-    Scene::Scene() : m_implPtr(new SceneImpl)
+    Scene::Scene(const lightSource_t& ls) : m_implPtr(new SceneImpl(ls))
     {
     }
 
@@ -94,24 +103,29 @@ namespace Custosh
         m_implPtr->loadTrianglesToDev(devPtr);
     }
 
-    [[nodiscard]] unsigned int Scene::numVertices() const
+    unsigned int Scene::numVertices() const
     {
         return m_implPtr->numVertices();
     }
 
-    [[nodiscard]] unsigned int Scene::numTriangles() const
+    unsigned int Scene::numTriangles() const
     {
         return m_implPtr->numTriangles();
     }
 
-    [[nodiscard]] const std::vector<unsigned int>& Scene::firstVertexIdxPerMeshVec() const
+    const std::vector<unsigned int>& Scene::firstVertexIdxPerMeshVec() const
     {
         return m_implPtr->firstVertexIdxPerMeshVec();
     }
 
-    [[nodiscard]] const std::vector<unsigned int>& Scene::numVerticesPerMeshVec() const
+    const std::vector<unsigned int>& Scene::numVerticesPerMeshVec() const
     {
         return m_implPtr->numVerticesPerMeshVec();
+    }
+
+    const lightSource_t& Scene::lightSource() const
+    {
+        return m_implPtr->lightSource();
     }
 
 } // Custosh

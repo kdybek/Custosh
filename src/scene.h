@@ -2,7 +2,7 @@
 #define CUSTOSH_SCENE_H
 
 
-#include "utility.h"
+#include "lib_utils.h"
 
 namespace Custosh
 {
@@ -29,7 +29,7 @@ namespace Custosh
     class Scene
     {
     public:
-        Scene();
+        explicit Scene(const lightSource_t& ls);
 
         ~Scene();
 
@@ -47,6 +47,8 @@ namespace Custosh
         [[nodiscard]] const std::vector<unsigned int>& firstVertexIdxPerMeshVec() const;
 
         [[nodiscard]] const std::vector<unsigned int>& numVerticesPerMeshVec() const;
+
+        [[nodiscard]] const lightSource_t& lightSource() const;
 
     private:
         class SceneImpl;

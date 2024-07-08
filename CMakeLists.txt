@@ -9,12 +9,12 @@ include_directories(include)
 set(SOURCES
         src/scene.cpp
         src/scene.h
-        src/utility.h
+        src/lib_utils.h
         src/custosh_except.h
-        src/windows_console_screen_buffer.h
+        src/internal/windows_console_screen_buffer.h
         src/renderer.cu
         src/renderer.h
-        src/gpu_mem_utils.h
+        src/internal/gpu_memory.h
 )
 
 add_library(custosh_lib STATIC ${SOURCES})

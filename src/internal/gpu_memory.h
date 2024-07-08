@@ -1,5 +1,5 @@
-#ifndef CUSTOSH_GPU_MEM_UTILS_H
-#define CUSTOSH_GPU_MEM_UTILS_H
+#ifndef CUSTOSH_GPU_MEMORY_H
+#define CUSTOSH_GPU_MEMORY_H
 
 
 #include <cuda_runtime.h>
@@ -194,4 +194,4 @@ namespace Custosh
 } // Custosh
 
 
-#endif // CUSTOSH_GPU_MEM_UTILS_H
+#endif // CUSTOSH_GPU_MEMORY_H

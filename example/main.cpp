@@ -7,7 +7,7 @@
 
 using namespace Custosh;
 
-int main()
+int init()
 {
     std::vector<Vector3<float>> cube1Ver;
     cube1Ver.push_back({-1.5, -0.5, 2});
@@ -63,14 +63,12 @@ int main()
     Vertex3D origin1 = {-1, 0, 2.5};
     Vertex3D origin2 = {1, 0, 2.5};
 
-    Scene scene;
+    Scene scene(ls);
 
     scene.add(cube1);
     scene.add(cube2);
 
     Renderer::loadScene(scene);
-
-    Renderer::setLightSource(ls);
 
     TransformMatrix rotationMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1), origin1);
     TransformMatrix rotationMat2 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle2), origin1);
@@ -95,6 +93,16 @@ int main()
 
         std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long) 0, 15 - elapsed.count())));
     }
+
+    return 42;
+}
+
+namespace {
+    int i = init();
+}
+
+int main()
+{
 }
 
 // TODO: logging

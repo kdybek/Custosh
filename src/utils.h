@@ -1,5 +1,5 @@
-#ifndef CUSTOSH_LIB_UTILS_H
-#define CUSTOSH_LIB_UTILS_H
+#ifndef CUSTOSH_UTILS_H
+#define CUSTOSH_UTILS_H
 
 
 #include <string>
@@ -12,19 +12,19 @@
 
 #ifdef __CUDACC__
 #include <cuda_runtime.h>
-#define IF_CUDACC(x) x
+#define CUSTOSH_IF_CUDACC(x) x
 #else
-#define IF_CUDACC(x)
+#define CUSTOSH_IF_CUDACC(x)
 #endif
 
 #ifdef __CUDA_ARCH__
-#define HOST_DEV_ERR(message) \
+#define CUSTOSH_HOST_DEV_ERR(message) \
     do { \
         printf(message); \
         asm("trap;"); \
     } while(0)
 #else
-#define HOST_DEV_ERR(message) \
+#define CUSTOSH_HOST_DEV_ERR(message) \
     do { \
         std::string errMsg = "Error at "; \
         errMsg += __FILE__; \
@@ -36,23 +36,23 @@
     } while(0)
 #endif
 
-#define INIT_LIST_ERR_MSG "incorrect initializer list"
-#define IDX_ERR_MSG "index out of bounds"
+#define CUSTOSH_INIT_LIST_ERR_MSG "incorrect initializer list"
+#define CUSTOSH_IDX_ERR_MSG "index out of bounds"
 
-#define HOST_DEV_AUX_FUNC IF_CUDACC(__host__ __device__) inline constexpr
-#define HOST_DEV_MEMBER IF_CUDACC(__host__ __device__) constexpr
-#define HOST_DEV_GETTER IF_CUDACC(__host__ __device__) inline constexpr
+#define CUSTOSH_HOST_DEV_AUX_FUNC CUSTOSH_IF_CUDACC(__host__ __device__) inline constexpr
+#define CUSTOSH_HOST_DEV_MEMBER CUSTOSH_IF_CUDACC(__host__ __device__) constexpr
+#define CUSTOSH_HOST_DEV_GETTER CUSTOSH_IF_CUDACC(__host__ __device__) inline constexpr
 
 namespace Custosh
 {
     /* Functions */
-    [[nodiscard]] HOST_DEV_AUX_FUNC float degreesToRadians(float degrees)
+    [[nodiscard]] CUSTOSH_HOST_DEV_AUX_FUNC float degreesToRadians(float degrees)
     {
         return degrees * (std::numbers::pi_v<float> / 180.f);
     }
 
     template<typename T>
-    [[nodiscard]] HOST_DEV_AUX_FUNC T clamp(T a, T min, T max)
+    [[nodiscard]] CUSTOSH_HOST_DEV_AUX_FUNC T clamp(T a, T min, T max)
     {
         if (a < min) { return min; }
         else if (a > max) { return max; }
@@ -60,19 +60,19 @@ namespace Custosh
     }
 
     template<typename T>
-    [[nodiscard]] HOST_DEV_AUX_FUNC T max3(T a, T b, T c)
+    [[nodiscard]] CUSTOSH_HOST_DEV_AUX_FUNC T max3(T a, T b, T c)
     {
         return max(max(a, b), c);
     }
 
     template<typename T>
-    [[nodiscard]] HOST_DEV_AUX_FUNC T min3(T a, T b, T c)
+    [[nodiscard]] CUSTOSH_HOST_DEV_AUX_FUNC T min3(T a, T b, T c)
     {
         return min(min(a, b), c);
     }
 
     template<typename T>
-    HOST_DEV_AUX_FUNC void swap(T& a, T& b)
+    CUSTOSH_HOST_DEV_AUX_FUNC void swap(T& a, T& b)
     {
         T temp = a;
         a = b;
@@ -84,7 +84,7 @@ namespace Custosh
     class Matrix
     {
     public:
-        HOST_DEV_MEMBER Matrix()
+        CUSTOSH_HOST_DEV_MEMBER Matrix()
         {
             for (unsigned int i = 0; i < Rows; ++i) {
                 for (unsigned int j = 0; j < Cols; ++j) {
@@ -93,13 +93,13 @@ namespace Custosh
             }
         }
 
-        HOST_DEV_MEMBER Matrix(const std::initializer_list<std::initializer_list<T>>& init)
+        CUSTOSH_HOST_DEV_MEMBER Matrix(const std::initializer_list<std::initializer_list<T>>& init)
         {
-            if (init.size() != Rows) { HOST_DEV_ERR(INIT_LIST_ERR_MSG); }
+            if (init.size() != Rows) { CUSTOSH_HOST_DEV_ERR(CUSTOSH_INIT_LIST_ERR_MSG); }
 
             unsigned int i = 0;
             for (const auto& row: init) {
-                if (row.size() != Cols) { HOST_DEV_ERR(INIT_LIST_ERR_MSG); }
+                if (row.size() != Cols) { CUSTOSH_HOST_DEV_ERR(CUSTOSH_INIT_LIST_ERR_MSG); }
 
                 unsigned int j = 0;
                 for (const auto& elem: row) {
@@ -110,21 +110,21 @@ namespace Custosh
             }
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER T& operator()(unsigned int row, unsigned int col)
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER T& operator()(unsigned int row, unsigned int col)
         {
-            if (row >= Rows || col >= Cols) { HOST_DEV_ERR(IDX_ERR_MSG); }
+            if (row >= Rows || col >= Cols) { CUSTOSH_HOST_DEV_ERR(CUSTOSH_IDX_ERR_MSG); }
 
             return m_matrix[row][col];
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER const T& operator()(unsigned int row, unsigned int col) const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER const T& operator()(unsigned int row, unsigned int col) const
         {
-            if (row >= Rows || col >= Cols) { HOST_DEV_ERR(IDX_ERR_MSG); }
+            if (row >= Rows || col >= Cols) { CUSTOSH_HOST_DEV_ERR(CUSTOSH_IDX_ERR_MSG); }
 
             return m_matrix[row][col];
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Matrix<T, Rows, Cols> operator*(const T& scalar) const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Matrix<T, Rows, Cols> operator*(const T& scalar) const
         {
             Matrix<T, Rows, Cols> result;
 
@@ -137,12 +137,12 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER friend Matrix<T, Rows, Cols> operator*(const T& scalar, const Matrix& matrix)
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER friend Matrix<T, Rows, Cols> operator*(const T& scalar, const Matrix& matrix)
         {
             return matrix * scalar;
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Matrix<T, Rows, Cols> operator+(const Matrix<T, Rows, Cols>& other) const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Matrix<T, Rows, Cols> operator+(const Matrix<T, Rows, Cols>& other) const
         {
             Matrix<T, Rows, Cols> result;
 
@@ -155,13 +155,13 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Matrix<T, Rows, Cols> operator-(const Matrix<T, Rows, Cols>& other) const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Matrix<T, Rows, Cols> operator-(const Matrix<T, Rows, Cols>& other) const
         {
             return *this + -1 * other;
         }
 
         template<unsigned int OtherCols>
-        [[nodiscard]] HOST_DEV_MEMBER Matrix<T, Rows, OtherCols>
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Matrix<T, Rows, OtherCols>
         operator*(const Matrix<T, Cols, OtherCols>& other) const
         {
             Matrix<T, Rows, OtherCols> result;
@@ -178,7 +178,7 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Matrix<T, Cols, Rows> transpose() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Matrix<T, Cols, Rows> transpose() const
         {
             Matrix<T, Cols, Rows> result;
 
@@ -191,10 +191,10 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] HOST_DEV_GETTER unsigned int numRows() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER unsigned int numRows() const
         { return Rows; }
 
-        [[nodiscard]] HOST_DEV_GETTER unsigned int numCols() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER unsigned int numCols() const
         { return Cols; }
 
     protected:
@@ -206,17 +206,17 @@ namespace Custosh
     class Vector : public Matrix<T, Size, 1>
     {
     public:
-        HOST_DEV_MEMBER Vector() : Matrix<T, Size, 1>()
+        CUSTOSH_HOST_DEV_MEMBER Vector() : Matrix<T, Size, 1>()
         {
         }
 
-        HOST_DEV_MEMBER explicit Vector(Matrix<T, Size, 1> matrix) : Matrix<T, Size, 1>(matrix)
+        CUSTOSH_HOST_DEV_MEMBER explicit Vector(Matrix<T, Size, 1> matrix) : Matrix<T, Size, 1>(matrix)
         {
         }
 
-        HOST_DEV_MEMBER Vector(const std::initializer_list<T>& init)
+        CUSTOSH_HOST_DEV_MEMBER Vector(const std::initializer_list<T>& init)
         {
-            if (init.size() != Size) { HOST_DEV_ERR(INIT_LIST_ERR_MSG); }
+            if (init.size() != Size) { CUSTOSH_HOST_DEV_ERR(CUSTOSH_INIT_LIST_ERR_MSG); }
 
             unsigned int i = 0;
             for (const auto& elem: init) {
@@ -225,26 +225,26 @@ namespace Custosh
             }
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER T& operator()(unsigned int idx)
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER T& operator()(unsigned int idx)
         {
-            if (idx >= Size) { HOST_DEV_ERR(IDX_ERR_MSG); }
+            if (idx >= Size) { CUSTOSH_HOST_DEV_ERR(CUSTOSH_IDX_ERR_MSG); }
 
             return this->m_matrix[idx][0];
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER const T& operator()(unsigned int idx) const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER const T& operator()(unsigned int idx) const
         {
-            if (idx >= Size) { HOST_DEV_ERR(IDX_ERR_MSG); }
+            if (idx >= Size) { CUSTOSH_HOST_DEV_ERR(CUSTOSH_IDX_ERR_MSG); }
 
             return this->m_matrix[idx][0];
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER T dot(const Vector<T, Size>& other) const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER T dot(const Vector<T, Size>& other) const
         {
             return ((*this).transpose() * other)(0, 0);
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER T normSq() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER T normSq() const
         {
             T normSq = T();
 
@@ -255,7 +255,7 @@ namespace Custosh
             return normSq;
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Vector<T, Size> normalized() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Vector<T, Size> normalized() const
         {
             T normSquared = normSq();
 
@@ -270,32 +270,32 @@ namespace Custosh
     class Vector2 : public Vector<T, 2>
     {
     public:
-        HOST_DEV_MEMBER Vector2() : Vector<T, 2>()
+        CUSTOSH_HOST_DEV_MEMBER Vector2() : Vector<T, 2>()
         {
         }
 
-        HOST_DEV_MEMBER explicit Vector2(Vector<T, 2> vector) : Vector<T, 2>(vector)
+        CUSTOSH_HOST_DEV_MEMBER explicit Vector2(Vector<T, 2> vector) : Vector<T, 2>(vector)
         {
         }
 
-        HOST_DEV_MEMBER explicit Vector2(Matrix<T, 2, 1> matrix) : Vector<T, 2>(matrix)
+        CUSTOSH_HOST_DEV_MEMBER explicit Vector2(Matrix<T, 2, 1> matrix) : Vector<T, 2>(matrix)
         {
         }
 
-        HOST_DEV_MEMBER Vector2(const std::initializer_list<T>& init) : Vector<T, 2>(init)
+        CUSTOSH_HOST_DEV_MEMBER Vector2(const std::initializer_list<T>& init) : Vector<T, 2>(init)
         {
         }
 
-        [[nodiscard]] HOST_DEV_GETTER T& x()
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER T& x()
         { return (*this)(0); }
 
-        [[nodiscard]] HOST_DEV_GETTER const T& x() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER const T& x() const
         { return (*this)(0); }
 
-        [[nodiscard]] HOST_DEV_GETTER T& y()
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER T& y()
         { return (*this)(1); }
 
-        [[nodiscard]] HOST_DEV_GETTER const T& y() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER const T& y() const
         { return (*this)(1); }
 
     }; // Vector2
@@ -304,23 +304,23 @@ namespace Custosh
     class Vector4 : public Vector<T, 4>
     {
     public:
-        HOST_DEV_MEMBER Vector4() : Vector<T, 4>()
+        CUSTOSH_HOST_DEV_MEMBER Vector4() : Vector<T, 4>()
         {
         }
 
-        HOST_DEV_MEMBER explicit Vector4(Vector<T, 4> vector) : Vector<T, 4>(vector)
+        CUSTOSH_HOST_DEV_MEMBER explicit Vector4(Vector<T, 4> vector) : Vector<T, 4>(vector)
         {
         }
 
-        HOST_DEV_MEMBER explicit Vector4(Matrix<T, 4, 1> matrix) : Vector<T, 4>(matrix)
+        CUSTOSH_HOST_DEV_MEMBER explicit Vector4(Matrix<T, 4, 1> matrix) : Vector<T, 4>(matrix)
         {
         }
 
-        HOST_DEV_MEMBER Vector4(const std::initializer_list<T>& init) : Vector<T, 4>(init)
+        CUSTOSH_HOST_DEV_MEMBER Vector4(const std::initializer_list<T>& init) : Vector<T, 4>(init)
         {
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Vector4<T> normalizeW() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Vector4<T> normalizeW() const
         {
             Vector4<T> result;
 
@@ -332,28 +332,28 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] HOST_DEV_GETTER T& x()
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER T& x()
         { return (*this)(0); }
 
-        [[nodiscard]] HOST_DEV_GETTER const T& x() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER const T& x() const
         { return (*this)(0); }
 
-        [[nodiscard]] HOST_DEV_GETTER T& y()
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER T& y()
         { return (*this)(1); }
 
-        [[nodiscard]] HOST_DEV_GETTER const T& y() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER const T& y() const
         { return (*this)(1); }
 
-        [[nodiscard]] HOST_DEV_GETTER T& z()
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER T& z()
         { return (*this)(2); }
 
-        [[nodiscard]] HOST_DEV_GETTER const T& z() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER const T& z() const
         { return (*this)(2); }
 
-        [[nodiscard]] HOST_DEV_GETTER T& w()
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER T& w()
         { return (*this)(3); }
 
-        [[nodiscard]] HOST_DEV_GETTER const T& w() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER const T& w() const
         { return (*this)(3); }
 
     }; // Vector4
@@ -362,23 +362,23 @@ namespace Custosh
     class Vector3 : public Vector<T, 3>
     {
     public:
-        HOST_DEV_MEMBER Vector3() : Vector<T, 3>()
+        CUSTOSH_HOST_DEV_MEMBER Vector3() : Vector<T, 3>()
         {
         }
 
-        HOST_DEV_MEMBER explicit Vector3(Vector<T, 3> vector) : Vector<T, 3>(vector)
+        CUSTOSH_HOST_DEV_MEMBER explicit Vector3(Vector<T, 3> vector) : Vector<T, 3>(vector)
         {
         }
 
-        HOST_DEV_MEMBER explicit Vector3(Matrix<T, 3, 1> matrix) : Vector<T, 3>(matrix)
+        CUSTOSH_HOST_DEV_MEMBER explicit Vector3(Matrix<T, 3, 1> matrix) : Vector<T, 3>(matrix)
         {
         }
 
-        HOST_DEV_MEMBER Vector3(const std::initializer_list<T>& init) : Vector<T, 3>(init)
+        CUSTOSH_HOST_DEV_MEMBER Vector3(const std::initializer_list<T>& init) : Vector<T, 3>(init)
         {
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Vector3<T> cross(const Vector3<T>& other) const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Vector3<T> cross(const Vector3<T>& other) const
         {
             Vector3<T> result;
 
@@ -389,27 +389,27 @@ namespace Custosh
             return result;
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Vector4<T> toHomogeneous() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Vector4<T> toHomogeneous() const
         {
             return {x(), y(), z(), static_cast<T>(1)};
         }
 
-        [[nodiscard]] HOST_DEV_GETTER T& x()
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER T& x()
         { return (*this)(0); }
 
-        [[nodiscard]] HOST_DEV_GETTER const T& x() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER const T& x() const
         { return (*this)(0); }
 
-        [[nodiscard]] HOST_DEV_GETTER T& y()
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER T& y()
         { return (*this)(1); }
 
-        [[nodiscard]] HOST_DEV_GETTER const T& y() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER const T& y() const
         { return (*this)(1); }
 
-        [[nodiscard]] HOST_DEV_GETTER T& z()
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER T& z()
         { return (*this)(2); }
 
-        [[nodiscard]] HOST_DEV_GETTER const T& z() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER const T& z() const
         { return (*this)(2); }
 
     }; // Vector3
@@ -418,34 +418,34 @@ namespace Custosh
     class Quaternion
     {
     public:
-        HOST_DEV_MEMBER Quaternion(T real, Vector3<T> imaginaryVec)
+        CUSTOSH_HOST_DEV_MEMBER Quaternion(T real, Vector3<T> imaginaryVec)
                 : m_realPart(real),
                   m_imaginaryVec(std::move(imaginaryVec))
         {
         }
 
-        HOST_DEV_MEMBER Quaternion(T real, T i, T j, T k)
+        CUSTOSH_HOST_DEV_MEMBER Quaternion(T real, T i, T j, T k)
                 : m_realPart(real), m_imaginaryVec({i, j, k})
         {
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Quaternion<T> operator*(const T& scalar) const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Quaternion<T> operator*(const T& scalar) const
         {
             return {scalar * m_realPart, Vector3<T>(scalar * m_imaginaryVec)};
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER friend Quaternion<T> operator*(const T& scalar,
-                                                                     const Quaternion<T>& quaternion)
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER friend Quaternion<T> operator*(const T& scalar,
+                                                                             const Quaternion<T>& quaternion)
         {
             return quaternion * scalar;
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Quaternion<T> operator+(const Quaternion& other) const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Quaternion<T> operator+(const Quaternion& other) const
         {
             return {m_realPart + other.m_realPart, m_imaginaryVec + other.m_imaginaryVec};
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Quaternion<T> operator*(const Quaternion& other) const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Quaternion<T> operator*(const Quaternion& other) const
         {
             return {m_realPart * other.m_realPart - m_imaginaryVec.dot(other.m_imaginaryVec),
                     Vector3<float>(m_realPart * other.m_imaginaryVec +
@@ -453,25 +453,25 @@ namespace Custosh
                                    m_imaginaryVec.cross(other.m_imaginaryVec))};
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Quaternion<T> conjunction() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Quaternion<T> conjunction() const
         {
             return {m_realPart, Vector3<T>(-1 * m_imaginaryVec)};
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER T normSq() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER T normSq() const
         {
             return m_realPart * m_realPart + m_imaginaryVec.normSq();
         }
 
-        [[nodiscard]] HOST_DEV_MEMBER Quaternion normalized() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_MEMBER Quaternion normalized() const
         {
             return (*this) * (1.f / sqrt(this->normSq()));
         }
 
-        [[nodiscard]] HOST_DEV_GETTER T realPart() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER T realPart() const
         { return m_realPart; }
 
-        [[nodiscard]] HOST_DEV_GETTER Vector3<T> imaginaryVec() const
+        [[nodiscard]] CUSTOSH_HOST_DEV_GETTER Vector3<T> imaginaryVec() const
         { return m_imaginaryVec; }
 
     private:
@@ -483,13 +483,13 @@ namespace Custosh
     class PerspectiveMatrix : public Matrix<float, 4, 4>
     {
     public:
-        HOST_DEV_MEMBER PerspectiveMatrix(float nearPlaneDist, float farPlaneDist)
+        CUSTOSH_HOST_DEV_MEMBER PerspectiveMatrix(float nearPlaneDist, float farPlaneDist)
                 : Matrix<float, 4, 4>(init(nearPlaneDist, farPlaneDist))
         {
         }
 
     private:
-        HOST_DEV_MEMBER static Matrix<float, 4, 4> init(float nearPlaneDist, float farPlaneDist)
+        CUSTOSH_HOST_DEV_MEMBER static Matrix<float, 4, 4> init(float nearPlaneDist, float farPlaneDist)
         {
             return {{nearPlaneDist, 0.f,           0.f,                          0.f},
                     {0.f,           nearPlaneDist, 0.f,                          0.f},
@@ -502,13 +502,13 @@ namespace Custosh
     class TranslationMatrix : public Matrix<float, 4, 4>
     {
     public:
-        HOST_DEV_MEMBER explicit TranslationMatrix(const Vector3<float>& translationVec)
+        CUSTOSH_HOST_DEV_MEMBER explicit TranslationMatrix(const Vector3<float>& translationVec)
                 : Matrix<float, 4, 4>(init(translationVec))
         {
         }
 
     private:
-        HOST_DEV_MEMBER static Matrix<float, 4, 4> init(const Vector3<float>& translationVec)
+        CUSTOSH_HOST_DEV_MEMBER static Matrix<float, 4, 4> init(const Vector3<float>& translationVec)
         {
             return {{1.f, 0.f, 0.f, translationVec.x()},
                     {0.f, 1.f, 0.f, translationVec.y()},
@@ -521,13 +521,13 @@ namespace Custosh
     class ScalingMatrix : public Matrix<float, 4, 4>
     {
     public:
-        HOST_DEV_MEMBER explicit ScalingMatrix(const Vector3<float>& scalingVec)
+        CUSTOSH_HOST_DEV_MEMBER explicit ScalingMatrix(const Vector3<float>& scalingVec)
                 : Matrix<float, 4, 4>(init(scalingVec))
         {
         }
 
     private:
-        HOST_DEV_MEMBER static Matrix<float, 4, 4> init(const Vector3<float>& scalingVec)
+        CUSTOSH_HOST_DEV_MEMBER static Matrix<float, 4, 4> init(const Vector3<float>& scalingVec)
         {
             return {{scalingVec.x(), 0.f,            0.f,            0.f},
                     {0.f,            scalingVec.y(), 0.f,            0.f},
@@ -540,19 +540,19 @@ namespace Custosh
     class RotationMatrix : public Matrix<float, 4, 4>
     {
     public:
-        HOST_DEV_MEMBER explicit RotationMatrix(const Quaternion<float>& rotationQuaternion)
+        CUSTOSH_HOST_DEV_MEMBER explicit RotationMatrix(const Quaternion<float>& rotationQuaternion)
                 : Matrix<float, 4, 4>(init(rotationQuaternion.normalized()))
         {
         }
 
-        HOST_DEV_MEMBER RotationMatrix(const Vector3<float>& rotationVec, float angle)
+        CUSTOSH_HOST_DEV_MEMBER RotationMatrix(const Vector3<float>& rotationVec, float angle)
                 : Matrix<float, 4, 4>(init({cos(angle / 2),
                                             Vector3<float>(sin(angle / 2) * rotationVec.normalized())}))
         {
         }
 
     private:
-        HOST_DEV_MEMBER static Matrix<float, 4, 4> init(const Quaternion<float>& rotationQuaternion)
+        CUSTOSH_HOST_DEV_MEMBER static Matrix<float, 4, 4> init(const Quaternion<float>& rotationQuaternion)
         {
             float w = rotationQuaternion.realPart();
             float x = rotationQuaternion.imaginaryVec().x();
@@ -570,15 +570,15 @@ namespace Custosh
     class DecentralizedTransformMatrix : public Matrix<float, 4, 4>
     {
     public:
-        HOST_DEV_MEMBER DecentralizedTransformMatrix(const Matrix<float, 4, 4>& transformMat,
-                                                     const Vector3<float>& origin)
+        CUSTOSH_HOST_DEV_MEMBER DecentralizedTransformMatrix(const Matrix<float, 4, 4>& transformMat,
+                                                             const Vector3<float>& origin)
                 : Matrix<float, 4, 4>(init(transformMat, origin))
         {
         }
 
     private:
-        HOST_DEV_MEMBER static Matrix<float, 4, 4> init(const Matrix<float, 4, 4>& transformMat,
-                                                        const Vector3<float>& origin)
+        CUSTOSH_HOST_DEV_MEMBER static Matrix<float, 4, 4> init(const Matrix<float, 4, 4>& transformMat,
+                                                                const Vector3<float>& origin)
         {
             auto centerTranslationMat = TranslationMatrix(Vector3<float>(origin * -1));
             auto originTranslationMat = TranslationMatrix(origin);
@@ -591,10 +591,10 @@ namespace Custosh
     class OrtProjMatrix : public Matrix<float, 4, 4>
     {
     public:
-        HOST_DEV_MEMBER OrtProjMatrix(const Vector3<float>& fromMinCorner,
-                                      const Vector3<float>& fromMaxCorner,
-                                      const Vector3<float>& toMinCorner,
-                                      const Vector3<float>& toMaxCorner)
+        CUSTOSH_HOST_DEV_MEMBER OrtProjMatrix(const Vector3<float>& fromMinCorner,
+                                              const Vector3<float>& fromMaxCorner,
+                                              const Vector3<float>& toMinCorner,
+                                              const Vector3<float>& toMaxCorner)
                 : Matrix<float, 4, 4>(init(fromMinCorner,
                                            fromMaxCorner,
                                            toMinCorner,
@@ -603,10 +603,10 @@ namespace Custosh
         }
 
     private:
-        HOST_DEV_MEMBER static Matrix<float, 4, 4> init(const Vector3<float>& fromMinCorner,
-                                                        const Vector3<float>& fromMaxCorner,
-                                                        const Vector3<float>& toMinCorner,
-                                                        const Vector3<float>& toMaxCorner)
+        CUSTOSH_HOST_DEV_MEMBER static Matrix<float, 4, 4> init(const Vector3<float>& fromMinCorner,
+                                                                const Vector3<float>& fromMaxCorner,
+                                                                const Vector3<float>& toMinCorner,
+                                                                const Vector3<float>& toMaxCorner)
         {
             auto centerTranslationVec = Vector3<float>(boxCenter(fromMinCorner, fromMaxCorner) * -1);
             TranslationMatrix centerTranslationMatrix(centerTranslationVec);
@@ -626,8 +626,8 @@ namespace Custosh
             return toTranslationMatrix * scalingMatrix * centerTranslationMatrix;
         }
 
-        HOST_DEV_MEMBER static Vector3<float> boxCenter(const Vector3<float>& minCorner,
-                                                        const Vector3<float>& maxCorner)
+        CUSTOSH_HOST_DEV_MEMBER static Vector3<float> boxCenter(const Vector3<float>& minCorner,
+                                                                const Vector3<float>& maxCorner)
         {
             return Vector3<float>((minCorner + maxCorner) * 0.5f);
         }
@@ -637,7 +637,7 @@ namespace Custosh
     class PerspectiveProjMatrix : public Matrix<float, 4, 4>
     {
     public:
-        HOST_DEV_MEMBER PerspectiveProjMatrix(const PerspectiveMatrix& pm, const OrtProjMatrix& opm)
+        CUSTOSH_HOST_DEV_MEMBER PerspectiveProjMatrix(const PerspectiveMatrix& pm, const OrtProjMatrix& opm)
                 : Matrix<float, 4, 4>(opm * pm)
         {
         }
@@ -656,7 +656,7 @@ namespace Custosh
         Vertex3D p1;
         Vertex3D p2;
 
-        HOST_DEV_MEMBER explicit triangle3D_t(
+        CUSTOSH_HOST_DEV_MEMBER explicit triangle3D_t(
                 const Vertex3D& p0 = Vertex3D(),
                 const Vertex3D& p1 = Vertex3D(),
                 const Vertex3D& p2 = Vertex3D()
@@ -671,7 +671,7 @@ namespace Custosh
         Vertex2D p1;
         Vertex2D p2;
 
-        HOST_DEV_MEMBER explicit triangle2D_t(
+        CUSTOSH_HOST_DEV_MEMBER explicit triangle2D_t(
                 const Vertex2D& p0 = Vertex2D(),
                 const Vertex2D& p1 = Vertex2D(),
                 const Vertex2D& p2 = Vertex2D()
@@ -686,7 +686,7 @@ namespace Custosh
         unsigned int p1;
         unsigned int p2;
 
-        HOST_DEV_MEMBER explicit triangleIndices_t(
+        CUSTOSH_HOST_DEV_MEMBER explicit triangleIndices_t(
                 unsigned int p0 = 0,
                 unsigned int p1 = 0,
                 unsigned int p2 = 0
@@ -702,7 +702,7 @@ namespace Custosh
         float yMax;
         float yMin;
 
-        HOST_DEV_MEMBER explicit boundingBox_t(
+        CUSTOSH_HOST_DEV_MEMBER explicit boundingBox_t(
                 float xMax = 0.f,
                 float xMin = 0.f,
                 float yMax = 0.f,
@@ -718,7 +718,7 @@ namespace Custosh
         float beta;
         float gamma;
 
-        HOST_DEV_MEMBER explicit barycentricCoords_t(
+        CUSTOSH_HOST_DEV_MEMBER explicit barycentricCoords_t(
                 float alpha = 0.f,
                 float beta = 0.f,
                 float gamma = 0.f
@@ -733,7 +733,7 @@ namespace Custosh
         Vertex3D coords;
         Vector3<float> normal;
 
-        HOST_DEV_MEMBER explicit fragment_t(
+        CUSTOSH_HOST_DEV_MEMBER explicit fragment_t(
                 bool occupied = false,
                 const Vertex3D& coords = Vertex3D(),
                 const Vector3<float>& normal = Vector3<float>()
@@ -747,7 +747,7 @@ namespace Custosh
         Vertex3D coords;
         float intensity;
 
-        HOST_DEV_MEMBER explicit lightSource_t(
+        CUSTOSH_HOST_DEV_MEMBER explicit lightSource_t(
                 const Vertex3D& coords = Vertex3D(),
                 float intensity = 1.f
         ) : coords(coords), intensity(intensity)
@@ -757,5 +757,13 @@ namespace Custosh
 
 } // Custosh
 
+#undef CUSTOSH_IF_CUDACC
+#undef CUSTOSH_HOST_DEV_ERR
+#undef CUSTOSH_INIT_LIST_ERR_MSG
+#undef CUSTOSH_IDX_ERR_MSG
+#undef CUSTOSH_HOST_DEV_AUX_FUNC
+#undef CUSTOSH_HOST_DEV_MEMBER
+#undef CUSTOSH_HOST_DEV_GETTER
 
-#endif // CUSTOSH_LIB_UTILS_H
+
+#endif // CUSTOSH_UTILS_H

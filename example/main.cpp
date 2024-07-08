@@ -70,13 +70,19 @@ int init()
 
     Renderer::loadScene(scene);
 
-    TransformMatrix rotationMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1), origin1);
-    TransformMatrix rotationMat2 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle2), origin1);
-    TransformMatrix rotationMat3 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle3), origin1);
+    TransformMatrix rotationMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1),
+                                                                origin1);
+    TransformMatrix rotationMat2 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle2),
+                                                                origin1);
+    TransformMatrix rotationMat3 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle3),
+                                                                origin1);
 
-    TransformMatrix rotationMat4 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle1), origin2);
-    TransformMatrix rotationMat5 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle2), origin2);
-    TransformMatrix rotationMat6 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle3), origin2);
+    TransformMatrix rotationMat4 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle1),
+                                                                origin2);
+    TransformMatrix rotationMat5 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle2),
+                                                                origin2);
+    TransformMatrix rotationMat6 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle3),
+                                                                origin2);
 
     Renderer::loadTransformMatrix(rotationMat1 * rotationMat2 * rotationMat3, 0);
 
@@ -97,12 +103,14 @@ int init()
     return 42;
 }
 
-namespace {
+namespace
+{
     int i = init();
 }
 
 int main()
 {
+    return 0;
 }
 
 // TODO: logging

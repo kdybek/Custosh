@@ -322,7 +322,7 @@ namespace Custosh::Renderer
                                                          getTransformDevPtr().get(),
                                                          PPM,
                                                          getVertex2DDevPtr().get());
-            CUDA_CHECK(cudaGetLastError());
+            CUSTOSH_CUDA_CHECK(cudaGetLastError());
         }
 
         __host__ void callGeometryShader()
@@ -339,7 +339,7 @@ namespace Custosh::Renderer
                                                            getTriangleCross2DDevPtr().get(),
                                                            getTriangleNormalDevPtr().get(),
                                                            getBoundingBoxDevPtr().get());
-            CUDA_CHECK(cudaGetLastError());
+            CUSTOSH_CUDA_CHECK(cudaGetLastError());
         }
 
         __host__ void callFragmentShader(unsigned int windowRows,
@@ -361,7 +361,7 @@ namespace Custosh::Renderer
                                                            getTriangleNormalDevPtr().get(),
                                                            getBoundingBoxDevPtr().get(),
                                                            getCharDevPtr().get());
-            CUDA_CHECK(cudaGetLastError());
+            CUSTOSH_CUDA_CHECK(cudaGetLastError());
         }
 
         __host__ void resetTransformMatrices()
@@ -375,7 +375,7 @@ namespace Custosh::Renderer
 
         __host__ void setLightSource(const lightSource_t& ls)
         {
-            CUDA_CHECK(cudaMemcpyToSymbol(g_devLightSource, &ls, sizeof(lightSource_t)));
+            CUSTOSH_CUDA_CHECK(cudaMemcpyToSymbol(g_devLightSource, &ls, sizeof(lightSource_t)));
         }
 
     } // anonymous
@@ -408,7 +408,7 @@ namespace Custosh::Renderer
 
     __host__ void setCameraTransformMatrix(const TransformMatrix& tm)
     {
-        CUDA_CHECK(cudaMemcpyToSymbol(g_devCameraTransformMat, &tm, sizeof(TransformMatrix)));
+        CUSTOSH_CUDA_CHECK(cudaMemcpyToSymbol(g_devCameraTransformMat, &tm, sizeof(TransformMatrix)));
     }
 
     __host__ void draw()
@@ -424,11 +424,11 @@ namespace Custosh::Renderer
 
         callVertexShader(PPM);
 
-        CUDA_CHECK(cudaDeviceSynchronize());
+        CUSTOSH_CUDA_CHECK(cudaDeviceSynchronize());
 
         callGeometryShader();
 
-        CUDA_CHECK(cudaDeviceSynchronize());
+        CUSTOSH_CUDA_CHECK(cudaDeviceSynchronize());
 
         callFragmentShader(windowDim.y(), windowDim.x());
 

@@ -9,7 +9,7 @@ include_directories(include)
 set(SOURCES
         src/scene.cpp
         src/scene.h
-        src/lib_utils.h
+        src/utils.h
         src/custosh_except.h
         src/internal/windows_console_screen_buffer.h
         src/renderer.cu

@@ -2,7 +2,7 @@
 #define CUSTOSH_SCENE_H
 
 
-#include "lib_utils.h"
+#include "utils.h"
 
 namespace Custosh
 {

@@ -15,7 +15,7 @@
 #define CUSTOSH_IF_CUDACC(x) x
 #else
 #define CUSTOSH_IF_CUDACC(x)
-#endif
+#endif // __CUDACC__
 
 #ifdef __CUDA_ARCH__
 #define CUSTOSH_HOST_DEV_ERR(message) \
@@ -33,8 +33,8 @@
         errMsg += " - "; \
         errMsg += message; \
         throw CustoshException(message); \
-    } while(0)
-#endif
+    } while (0)
+#endif // __CUDA_ARCH__
 
 #define CUSTOSH_INIT_LIST_ERR_MSG "incorrect initializer list"
 #define CUSTOSH_IDX_ERR_MSG "index out of bounds"

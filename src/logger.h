@@ -8,9 +8,9 @@
 namespace Custosh
 {
     enum class LogLevel {
-        TRACE,
-        INFO,
-        ERROR,
+        Trace,
+        Info,
+        Error,
     };
 
     class Logger
@@ -51,7 +51,7 @@ namespace Custosh
 
     namespace LoggerManager
     {
-        void addLogger(const std::unique_ptr<Logger>& consoleLogger);
+        void addLogger(std::unique_ptr<Logger> consoleLogger);
 
         void log(LogLevel level, const std::string& message);
 

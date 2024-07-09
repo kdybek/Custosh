@@ -32,11 +32,11 @@ namespace Custosh
         std::string logLevelToString(LogLevel level)
         {
             switch (level) {
-                case LogLevel::TRACE:
+                case LogLevel::Trace:
                     return "TRACE";
-                case LogLevel::INFO:
+                case LogLevel::Info:
                     return "INFO";
-                case LogLevel::ERROR:
+                case LogLevel::Error:
                     return "ERROR";
             }
 

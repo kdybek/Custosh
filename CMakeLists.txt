@@ -11,13 +11,13 @@ set(SOURCES
         src/scene.h
         src/utility.h
         src/custosh_except.h
-        src/internal/windows_console_screen_buffer.h
         src/renderer.cu
         src/renderer.h
-        src/internal/gpu_memory.h
         src/logger.cpp
         src/logger.h
-        src/internal/aux_types.h
+        src/internal/debug_macros.h
+        src/internal/gpu_memory.h
+        src/internal/windows_console_screen_buffer.h
 )
 
 add_library(custosh_lib STATIC ${SOURCES})
@@ -31,6 +31,10 @@ set_target_properties(custosh_lib PROPERTIES
 target_include_directories(custosh_lib PRIVATE "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 
 target_include_directories(custosh_lib PUBLIC include)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(custosh_lib PRIVATE DEBUG)
+endif()
 
 add_executable(example example/main.cpp)
 

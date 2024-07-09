@@ -1,5 +1,6 @@
 #include "renderer.h"
 
+#include "internal/debug_macros.h"
 #include "internal/gpu_memory.h"
 #include "internal/windows_console_screen_buffer.h"
 
@@ -248,8 +249,10 @@ namespace Custosh::Renderer
             return static_cast<float>(pow((a.x() - b.x()), 2) + pow((a.y() - b.y()), 2) + pow((a.z() - b.z()), 2));
         }
 
-        [[nodiscard]] __device__ float pointBrightness(const fragment_t& p, const lightSource_t& ls)
+        [[nodiscard]] __device__ float fragmentBrightness(const fragment_t& p, const lightSource_t& ls)
         {
+            if (!p.occupied) { return 0.f; }
+
             float distSq = distanceSq(p.coords, ls.coords);
             auto pointToLightSourceVec = Vector3<float>(ls.coords - p.coords);
             auto pointToLightSourceVecNorm = Vector3<float>(pointToLightSourceVec.normalized());
@@ -303,6 +306,7 @@ namespace Custosh::Renderer
 
             vertex3DPtr[i] = meshVertex_t({updatedVertex4D.x(), updatedVertex4D.y(), updatedVertex4D.z()},
                                           meshVertex.meshIdx);
+
             vertex2DPtr[i] = {vertex4DPerspective.x(), vertex4DPerspective.y()};
         }
 
@@ -326,6 +330,7 @@ namespace Custosh::Renderer
             boundingBoxPtr[i] = findBounds(triangle2D);
         }
 
+        // TODO: blocking in shared memory
         __global__ void fragmentShader(unsigned int rows,
                                        unsigned int cols,
                                        const triangleIndices_t* indexPtr,
@@ -369,10 +374,7 @@ namespace Custosh::Renderer
                 }
             }
 
-            if (fragment.occupied) {
-                characters[y * cols + x] = brightnessToASCII(pointBrightness(fragment, g_devLightSource));
-            }
-            else { characters[y * cols + x] = brightnessToASCII(0.f); }
+            characters[y * cols + x] = brightnessToASCII(fragmentBrightness(fragment, g_devLightSource));
         }
 
         /* Host auxiliary functions */
@@ -477,6 +479,30 @@ namespace Custosh::Renderer
             CUSTOSH_CUDA_CHECK(cudaMemcpyToSymbol(g_devLightSource, &ls, sizeof(lightSource_t)));
         }
 
+        __host__ void renderingPipeline(unsigned int screenRows,
+                                        unsigned int screenCols,
+                                        const PerspectiveProjMatrix& ppm)
+        {
+            callVertexShader(ppm);
+
+            CUSTOSH_CUDA_CHECK(cudaDeviceSynchronize());
+
+            callGeometryShader();
+
+            CUSTOSH_CUDA_CHECK(cudaDeviceSynchronize());
+
+            callFragmentShader(screenRows, screenCols);
+        }
+
+        __host__ void fetchAndDrawChars(unsigned int screenRows,
+                                        unsigned int screenCols)
+        {
+            getCharDevPtr().loadToHost(getCharHostPtr().get());
+            getInactiveBuf().draw(getCharHostPtr().get(), screenRows, screenCols);
+            getInactiveBuf().activate();
+            std::swap(getActiveBuf(), getInactiveBuf());
+        }
+
     } // anonymous
 
     __host__ void loadScene(const Scene& scene)
@@ -513,20 +539,9 @@ namespace Custosh::Renderer
 
         resizeScreenDependentPtrs(windowDim.y(), windowDim.x());
 
-        callVertexShader(ppm);
+        CUSTOSH_DEBUG_LOG_TIME(renderingPipeline(windowDim.y(), windowDim.x(), ppm), "rendering pipeline");
 
-        CUSTOSH_CUDA_CHECK(cudaDeviceSynchronize());
-
-        callGeometryShader();
-
-        CUSTOSH_CUDA_CHECK(cudaDeviceSynchronize());
-
-        callFragmentShader(windowDim.y(), windowDim.x());
-
-        getCharDevPtr().loadToHost(getCharHostPtr().get());
-        getInactiveBuf().draw(getCharHostPtr().get(), windowDim.y(), windowDim.x());
-        getInactiveBuf().activate();
-        std::swap(getActiveBuf(), getInactiveBuf());
+        CUSTOSH_DEBUG_LOG_TIME(fetchAndDrawChars(windowDim.y(), windowDim.x()), "fetch and draw");
     }
 
 } // Custosh::Renderer

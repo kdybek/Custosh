@@ -1,14 +1,15 @@
-#include <iostream>
 #include <chrono>
 #include <thread>
 #include <algorithm>
 
-#include "custosh.h"
+#include <custosh.h>
 
 using namespace Custosh;
 
 int init()
 {
+    LoggerManager::addLogger(std::make_unique<ConsoleLogger>(ConsoleLogger()));
+
     std::vector<Vector3<float>> cube1Ver;
     cube1Ver.push_back({-1.5, -0.5, 2});
     cube1Ver.push_back({-0.5, -0.5, 2});
@@ -111,5 +112,3 @@ namespace
 int main()
 {
 }
-
-// TODO: logging

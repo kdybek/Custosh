@@ -32,20 +32,20 @@ int init()
     cube2Ver.push_back({1.5, 0.5, 3});
 
     std::vector<triangleIndices_t> cubeInd;
-    cubeInd.emplace_back(0, 2, 3);
-    cubeInd.emplace_back(3, 1, 0);
-    cubeInd.emplace_back(4, 5, 7);
-    cubeInd.emplace_back(7, 6, 4);
+    cubeInd.emplace_back(0, 1, 2);
+    cubeInd.emplace_back(2, 1, 3);
+    cubeInd.emplace_back(4, 5, 0);
+    cubeInd.emplace_back(0, 5, 1);
 
-    cubeInd.emplace_back(0, 2, 6);
-    cubeInd.emplace_back(6, 4, 0);
-    cubeInd.emplace_back(1, 3, 7);
-    cubeInd.emplace_back(7, 5, 1);
+    cubeInd.emplace_back(6, 7, 4);
+    cubeInd.emplace_back(4, 7, 5);
+    cubeInd.emplace_back(2, 3, 6);
+    cubeInd.emplace_back(6, 3, 7);
 
-    cubeInd.emplace_back(2, 6, 7);
-    cubeInd.emplace_back(7, 3, 2);
-    cubeInd.emplace_back(0, 1, 5);
-    cubeInd.emplace_back(5, 4, 0);
+    cubeInd.emplace_back(1, 5, 3);
+    cubeInd.emplace_back(3, 5, 7);
+    cubeInd.emplace_back(4, 0, 6);
+    cubeInd.emplace_back(6, 0, 2);
 
     Mesh cube1(cube1Ver, cubeInd);
     Mesh cube2(cube2Ver, cubeInd);

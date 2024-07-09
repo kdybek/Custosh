@@ -2,7 +2,7 @@
 
 #include "internal/gpu_memory.h"
 
-namespace custosh
+namespace Custosh
 {
     class Scene::SceneImpl
     {
@@ -10,37 +10,32 @@ namespace custosh
         explicit SceneImpl(const lightSource_t& ls)
                 : m_vertices(0),
                   m_triangles(0),
-                  m_firstVertexIdxPerMesh(),
-                  m_numVerticesPerMesh(),
-                  m_lightSource(ls)
+                  m_lightSource(ls),
+                  m_nextMeshIdx(0)
         {
         }
 
         // Returns the mesh index withing the scene.
         unsigned int add(const Mesh& mesh)
         {
-            const unsigned int addedMeshIdx = m_firstVertexIdxPerMesh.size();
             const unsigned int firstVertexIdx = m_vertices.size();
             const unsigned int firstTriangleIdx = m_triangles.size();
-
-            m_firstVertexIdxPerMesh.push_back(firstVertexIdx);
-            m_numVerticesPerMesh.push_back(mesh.vertices().size());
 
             m_vertices.resizeAndCopy(m_vertices.size() + mesh.vertices().size());
             m_triangles.resizeAndCopy(m_triangles.size() + mesh.triangles().size());
 
             for (unsigned int i = firstVertexIdx; i < m_vertices.size(); ++i) {
-                m_vertices.get()[i] = mesh.vertices()[i - firstVertexIdx];
+                m_vertices.get()[i] = meshVertex_t(mesh.vertices()[i - firstVertexIdx], m_nextMeshIdx);
             }
 
             for (unsigned int i = firstTriangleIdx; i < m_triangles.size(); ++i) {
                 m_triangles.get()[i] = offsetTriangleIndices(mesh.triangles()[i - firstTriangleIdx], firstVertexIdx);
             }
 
-            return addedMeshIdx;
+            return m_nextMeshIdx++;
         }
 
-        void loadVerticesToDev(Vertex3D* devPtr) const
+        void loadVerticesToDev(meshVertex_t* devPtr) const
         {
             m_vertices.loadToDev(devPtr);
         }
@@ -50,27 +45,23 @@ namespace custosh
             m_triangles.loadToDev(devPtr);
         }
 
-        [[nodiscard]] unsigned int numVertices() const
+        [[nodiscard]] inline unsigned int numVertices() const
         { return m_vertices.size(); }
 
-        [[nodiscard]] unsigned int numTriangles() const
+        [[nodiscard]] inline unsigned int numTriangles() const
         { return m_triangles.size(); }
 
-        [[nodiscard]] inline const std::vector<unsigned int>& firstVertexIdxPerMeshVec() const
-        { return m_firstVertexIdxPerMesh; }
-
-        [[nodiscard]] inline const std::vector<unsigned int>& numVerticesPerMeshVec() const
-        { return m_numVerticesPerMesh; }
+        [[nodiscard]] inline unsigned int numMeshes() const
+        { return m_nextMeshIdx; }
 
         [[nodiscard]] inline const lightSource_t& lightSource() const
         { return m_lightSource; }
 
     private:
-        HostPtr<Vertex3D> m_vertices;
+        HostPtr<meshVertex_t> m_vertices;
         HostPtr<triangleIndices_t> m_triangles;
-        std::vector<unsigned int> m_firstVertexIdxPerMesh;
-        std::vector<unsigned int> m_numVerticesPerMesh;
         lightSource_t m_lightSource;
+        unsigned int m_nextMeshIdx;
 
         static triangleIndices_t offsetTriangleIndices(const triangleIndices_t& ti, unsigned int offset)
         {
@@ -93,7 +84,7 @@ namespace custosh
         return m_implPtr->add(mesh);
     }
 
-    void Scene::loadVerticesToDev(Vertex3D* devPtr) const
+    void Scene::loadVerticesToDev(meshVertex_t* devPtr) const
     {
         m_implPtr->loadVerticesToDev(devPtr);
     }
@@ -113,14 +104,9 @@ namespace custosh
         return m_implPtr->numTriangles();
     }
 
-    const std::vector<unsigned int>& Scene::firstVertexIdxPerMeshVec() const
+    unsigned int Scene::numMeshes() const
     {
-        return m_implPtr->firstVertexIdxPerMeshVec();
-    }
-
-    const std::vector<unsigned int>& Scene::numVerticesPerMeshVec() const
-    {
-        return m_implPtr->numVerticesPerMeshVec();
+        return m_implPtr->numMeshes();
     }
 
     const lightSource_t& Scene::lightSource() const
@@ -128,4 +114,4 @@ namespace custosh
         return m_implPtr->lightSource();
     }
 
-} // custosh
+} // Custosh

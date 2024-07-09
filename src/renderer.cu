@@ -3,7 +3,7 @@
 #include "internal/gpu_memory.h"
 #include "internal/windows_console_screen_buffer.h"
 
-namespace custosh::renderer
+namespace Custosh::Renderer
 {
     namespace
     {
@@ -110,16 +110,13 @@ namespace custosh::renderer
         /* @formatter:off */
 
         /* Host global variables */
-        // Preventing static initialization order fiasco.
-        std::vector<unsigned int>& getFirstVertexIdxPerMesh() { static std::vector<unsigned int> s_firstVertexIdxPerMesh; return s_firstVertexIdxPerMesh; }
-        std::vector<unsigned int>& getNumVerticesPerMesh() { static std::vector<unsigned int> s_numVerticesPerMesh; return s_numVerticesPerMesh; }
         WindowsConsoleScreenBuffer& getActiveBuf() { static WindowsConsoleScreenBuffer s_activeBuf; return s_activeBuf; }
         WindowsConsoleScreenBuffer& getInactiveBuf() { static WindowsConsoleScreenBuffer s_inactiveBuf; return s_inactiveBuf; }
         HostPtr<char>& getCharHostPtr() { static HostPtr<char> s_charHostPtr(BASE_DEV_WSPACE_SIZE); return s_charHostPtr; }
         HostPtr<TransformMatrix>& getTransformHostPtr() { static HostPtr<TransformMatrix> s_transformHostPtr(BASE_DEV_WSPACE_SIZE); return s_transformHostPtr; }
 
         /* Device working space pointers */
-        DevPtr<Vertex3D>& getVertex3DDevPtr() { static DevPtr<Vertex3D> s_vertex3DDevPtr(BASE_DEV_WSPACE_SIZE); return s_vertex3DDevPtr; }
+        DevPtr<meshVertex_t>& getVertex3DDevPtr() { static DevPtr<meshVertex_t> s_vertex3DDevPtr(BASE_DEV_WSPACE_SIZE); return s_vertex3DDevPtr; }
         DevPtr<triangleIndices_t>& getTriangleDevPtr() { static DevPtr<triangleIndices_t> s_triangleDevPtr(BASE_DEV_WSPACE_SIZE); return s_triangleDevPtr; }
         DevPtr<TransformMatrix>& getTransformDevPtr() { static DevPtr<TransformMatrix> s_transformDevPtr(BASE_DEV_WSPACE_SIZE); return s_transformDevPtr; }
         DevPtr<Vertex2D>& getVertex2DDevPtr() { static DevPtr<Vertex2D> s_vertex2DDevPtr(BASE_DEV_WSPACE_SIZE); return s_vertex2DDevPtr; }
@@ -279,15 +276,15 @@ namespace custosh::renderer
         }
 
         [[nodiscard]] __device__ triangle3D_t getTriangle3D(const triangleIndices_t& triangleIndices,
-                                                            const Vertex3D* vertex3DPtr)
+                                                            const meshVertex_t* vertex3DPtr)
         {
-            return triangle3D_t(vertex3DPtr[triangleIndices.p0],
-                                vertex3DPtr[triangleIndices.p1],
-                                vertex3DPtr[triangleIndices.p2]);
+            return triangle3D_t(vertex3DPtr[triangleIndices.p0].coords,
+                                vertex3DPtr[triangleIndices.p1].coords,
+                                vertex3DPtr[triangleIndices.p2].coords);
         }
 
         /* Kernels */
-        __global__ void vertexShader(Vertex3D* vertex3DPtr,
+        __global__ void vertexShader(meshVertex_t* vertex3DPtr,
                                      unsigned int numVertices,
                                      const TransformMatrix* transformMatPtr,
                                      PerspectiveProjMatrix ppm,
@@ -297,19 +294,19 @@ namespace custosh::renderer
 
             if (i >= numVertices) { return; }
 
-            Vector4<float> updatedVertex4D = Vector4<float>(transformMatPtr[i] *
-                                                            vertex3DPtr[i].toHomogeneous()).normalizeW();
+            Vector4<float> updatedVertex4D = Vector4<float>(transformMatPtr[vertex3DPtr[i].meshIdx] *
+                                                            vertex3DPtr[i].coords.toHomogeneous()).normalizeW();
 
             Vector4<float> vertex4DPerspective = Vector4<float>(ppm * updatedVertex4D).normalizeW();
 
-            vertex3DPtr[i] = {updatedVertex4D.x(), updatedVertex4D.y(), updatedVertex4D.z()};
+            vertex3DPtr[i] = meshVertex_t({updatedVertex4D.x(), updatedVertex4D.y(), updatedVertex4D.z()}, vertex3DPtr[i].meshIdx);
             vertex2DPtr[i] = {vertex4DPerspective.x(), vertex4DPerspective.y()};
         }
 
         __global__ void geometryShader(triangleIndices_t* indexPtr,
                                        unsigned int numTriangles,
                                        const Vertex2D* vertex2DPtr,
-                                       const Vertex3D* vertex3DPtr,
+                                       const meshVertex_t* vertex3DPtr,
                                        float* cross2DPtr,
                                        Vector3<float>* normalPtr,
                                        boundingBox_t* boundingBoxPtr)
@@ -341,7 +338,7 @@ namespace custosh::renderer
                                        const triangleIndices_t* indexPtr,
                                        unsigned int numTriangles,
                                        const Vertex2D* vertex2DPtr,
-                                       const Vertex3D* vertex3DPtr,
+                                       const meshVertex_t* vertex3DPtr,
                                        const float* cross2DPtr,
                                        const Vector3<float>* normalPtr,
                                        const boundingBox_t* boundingBoxPtr,
@@ -386,7 +383,8 @@ namespace custosh::renderer
         }
 
         /* Host auxiliary functions */
-        [[nodiscard]] __host__ PerspectiveProjMatrix CCV2ScreenPPM(unsigned int screenRows, unsigned int screenCols)
+        [[nodiscard]] __host__ PerspectiveProjMatrix CCV2ScreenPPM(unsigned int screenRows,
+                                                                   unsigned int screenCols)
         {
             return {PerspectiveMatrix(PM_NEAR_PLANE, PM_FAR_PLANE),
                     OrtProjMatrix(CCV_MIN_CORNER,
@@ -395,20 +393,24 @@ namespace custosh::renderer
                                   {static_cast<float>(screenCols), static_cast<float>(screenRows), 0.f})};
         }
 
-        __host__ void resizeSceneDependentPtrs(unsigned int numVertices, unsigned int numTriangles)
+        __host__ void resizeSceneDependentPtrs(unsigned int numVertices,
+                                               unsigned int numTriangles,
+                                               unsigned int numMeshes)
         {
             getVertex3DDevPtr().resizeAndDiscardData(numVertices);
             getVertex2DDevPtr().resizeAndDiscardData(numVertices);
-            getTransformDevPtr().resizeAndDiscardData(numVertices);
-            getTransformHostPtr().resizeAndDiscardData(numVertices);
 
             getTriangleDevPtr().resizeAndDiscardData(numTriangles);
             getBoundingBoxDevPtr().resizeAndDiscardData(numTriangles);
             getTriangleCross2DDevPtr().resizeAndDiscardData(numTriangles);
             getTriangleNormalDevPtr().resizeAndDiscardData(numTriangles);
+
+            getTransformDevPtr().resizeAndDiscardData(numMeshes);
+            getTransformHostPtr().resizeAndDiscardData(numMeshes);
         }
 
-        __host__ void resizeScreenDependentPtrs(unsigned int windowRows, unsigned int windowCols)
+        __host__ void resizeScreenDependentPtrs(unsigned int windowRows,
+                                                unsigned int windowCols)
         {
             getCharHostPtr().resizeAndDiscardData(windowRows * windowCols);
             getCharDevPtr().resizeAndDiscardData(windowRows * windowCols);
@@ -486,10 +488,7 @@ namespace custosh::renderer
 
     __host__ void loadScene(const Scene& scene)
     {
-        resizeSceneDependentPtrs(scene.numVertices(), scene.numTriangles());
-
-        getFirstVertexIdxPerMesh() = scene.firstVertexIdxPerMeshVec();
-        getNumVerticesPerMesh() = scene.numVerticesPerMeshVec();
+        resizeSceneDependentPtrs(scene.numVertices(), scene.numTriangles(), scene.numMeshes());
 
         scene.loadVerticesToDev(getVertex3DDevPtr().get());
         scene.loadTrianglesToDev(getTriangleDevPtr().get());
@@ -501,11 +500,9 @@ namespace custosh::renderer
 
     __host__ void loadTransformMatrix(const TransformMatrix& tm, unsigned int meshIdx)
     {
-        if (meshIdx >= getFirstVertexIdxPerMesh().size()) { throw CustoshException("invalid mesh index"); }
+        if (meshIdx >= getTransformHostPtr().size()) { throw CustoshException("invalid mesh index"); }
 
-        for (unsigned int i = 0; i < getNumVerticesPerMesh()[meshIdx]; ++i) {
-            getTransformHostPtr().get()[i + getFirstVertexIdxPerMesh()[meshIdx]] = tm;
-        }
+        getTransformHostPtr().get()[meshIdx] = tm;
 
         getTransformHostPtr().loadToDev(getTransformDevPtr().get());
     }
@@ -539,4 +536,4 @@ namespace custosh::renderer
         std::swap(getActiveBuf(), getInactiveBuf());
     }
 
-} // custosh::renderer
+} // Custosh::Renderer

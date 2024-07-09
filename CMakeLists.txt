@@ -17,6 +17,7 @@ set(SOURCES
         src/internal/gpu_memory.h
         src/logger.cpp
         src/logger.h
+        src/internal/aux_types.h
 )
 
 add_library(custosh_lib STATIC ${SOURCES})

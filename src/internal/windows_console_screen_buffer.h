@@ -10,7 +10,7 @@
 #include "../custosh_except.h"
 #include "../utility.h"
 
-namespace custosh
+namespace Custosh
 {
     class WindowsConsoleScreenBuffer
     {
@@ -84,7 +84,7 @@ namespace custosh
 
     }; // WindowsConsoleScreenBuffer
 
-} // custosh
+} // Custosh
 
 
 #endif // CUSTOSH_WINDOWS_CONSOLE_SCREEN_BUFFER_H

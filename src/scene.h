@@ -4,7 +4,7 @@
 
 #include "utility.h"
 
-namespace custosh
+namespace Custosh
 {
     class Mesh
     {
@@ -36,7 +36,7 @@ namespace custosh
         // Returns the mesh index withing the scene.
         unsigned int add(const Mesh& mesh);
 
-        void loadVerticesToDev(Vertex3D* devPtr) const;
+        void loadVerticesToDev(meshVertex_t* devPtr) const;
 
         void loadTrianglesToDev(triangleIndices_t* devPtr) const;
 
@@ -44,9 +44,7 @@ namespace custosh
 
         [[nodiscard]] unsigned int numTriangles() const;
 
-        [[nodiscard]] const std::vector<unsigned int>& firstVertexIdxPerMeshVec() const;
-
-        [[nodiscard]] const std::vector<unsigned int>& numVerticesPerMeshVec() const;
+        [[nodiscard]] unsigned int numMeshes() const;
 
         [[nodiscard]] const lightSource_t& lightSource() const;
 
@@ -57,7 +55,7 @@ namespace custosh
 
     }; // Scene
 
-} // custosh
+} // Custosh
 
 
 #endif // CUSTOSH_SCENE_H

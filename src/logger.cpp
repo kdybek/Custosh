@@ -8,14 +8,14 @@
 
 #include "custosh_except.h"
 
-namespace custosh
+namespace Custosh
 {
     namespace
     {
         /* Global variables */
-        std::vector<std::shared_ptr<Logger>>& getLoggers()
+        std::vector<std::unique_ptr<Logger>>& getLoggers()
         {
-            static std::vector<std::shared_ptr<Logger>> s_logger;
+            static std::vector<std::unique_ptr<Logger>> s_logger;
             return s_logger;
         }
 
@@ -84,11 +84,11 @@ namespace custosh
         m_file << "[" << getCurrentTime() << "] " << logLevelToString(level) << ": " << message << '\n';
     }
 
-    namespace loggerManager
+    namespace LoggerManager
     {
-        void addLogger(const std::shared_ptr<Logger>& consoleLogger)
+        void addLogger(std::unique_ptr<Logger> consoleLogger)
         {
-            getLoggers().push_back(consoleLogger);
+            getLoggers().push_back(std::move(consoleLogger));
         }
 
         void log(LogLevel level, const std::string& message)
@@ -98,6 +98,6 @@ namespace custosh
             }
         }
 
-    } // loggerManager
+    } // LoggerManager
 
-} // custosh
+} // Custosh

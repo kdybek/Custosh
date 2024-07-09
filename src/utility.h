@@ -43,7 +43,7 @@
 #define CUSTOSH_HOST_DEV_MEMBER CUSTOSH_IF_CUDACC(__host__ __device__) constexpr
 #define CUSTOSH_HOST_DEV_GETTER CUSTOSH_IF_CUDACC(__host__ __device__) inline constexpr
 
-namespace custosh
+namespace Custosh
 {
     /* Functions */
     [[nodiscard]] CUSTOSH_HOST_DEV_AUX_FUNC float degreesToRadians(float degrees)
@@ -650,7 +650,20 @@ namespace custosh
         }
     };
 
-} // custosh
+    struct meshVertex_t
+    {
+        Vertex3D coords;
+        unsigned int meshIdx;
+
+        CUSTOSH_HOST_DEV_MEMBER explicit meshVertex_t(
+                const Vertex3D& coords = Vertex3D(),
+                unsigned int meshIdx = 0
+        ) : coords(coords), meshIdx(meshIdx)
+        {
+        }
+    };
+
+} // Custosh
 
 #undef CUSTOSH_IF_CUDACC
 #undef CUSTOSH_HOST_DEV_ERR

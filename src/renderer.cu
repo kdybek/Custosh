@@ -122,8 +122,8 @@ namespace Custosh::Renderer
         constexpr Vertex3D H_CCV_MAX_CORNER = {1.f, 1.f, 1.f};
         constexpr float H_PM_NEAR_PLANE = 1.f;
         constexpr float H_PM_FAR_PLANE = 1000.f;
-        constexpr unsigned int H_THREADS_PER_BLOCK_X = 8;
-        constexpr unsigned int H_THREADS_PER_BLOCK_Y = 8;
+        constexpr unsigned int H_THREADS_PER_BLOCK_X = 16;
+        constexpr unsigned int H_THREADS_PER_BLOCK_Y = 16;
         constexpr unsigned int H_THREADS_PER_BLOCK = H_THREADS_PER_BLOCK_X * H_THREADS_PER_BLOCK_Y;
         constexpr TransformMatrix H_IDENTITY_MATRIX = {{1.f, 0.f, 0.f, 0.f},
                                                        {0.f, 1.f, 0.f, 0.f},
@@ -349,20 +349,21 @@ namespace Custosh::Renderer
 
             if (i >= numTriangles) { return; }
 
-            triangleIndices_t tIndRef = triangleIndPtr[i];
-            auto& tVarsRef = triangleVarsPtr[i];
+            triangleIndices_t tInd = triangleIndPtr[i];
 
-            triangle2D_t triangle2D = getTriangle2D(tIndRef, vertex2DPtr);
-            triangle3D_t triangle3D = getTriangle3D(tIndRef, meshVertexPtr);
+            triangle2D_t triangle2D = getTriangle2D(tInd, vertex2DPtr);
+            triangle3D_t triangle3D = getTriangle3D(tInd, meshVertexPtr);
 
-            tVarsRef.area2x = cross2D(triangle2D.p0, triangle2D.p1, triangle2D.p2);
-            tVarsRef.normal = triangleNormal(triangle3D);
-            tVarsRef.boundingBox = findBounds(triangle2D);
+            triangleVariables_t tVars(cross2D(triangle2D.p0, triangle2D.p1, triangle2D.p2),
+                                      findBounds(triangle2D),
+                                      triangleNormal(triangle3D));
+
+            triangleVarsPtr[i] = tVars;
         }
 
         __global__ void fragmentShader(unsigned int rows,
                                        unsigned int cols,
-                                       const triangleIndices_t* indexPtr,
+                                       const triangleIndices_t* triangleIndPtr,
                                        unsigned int numTriangles,
                                        const Vertex2D* vertex2DPtr,
                                        const meshVertex_t* meshVertexPtr,
@@ -384,12 +385,12 @@ namespace Custosh::Renderer
                 const unsigned int globalMemIdx = i * D_THREADS_PER_BLOCK + sharedMemIdx;
 
                 if (globalMemIdx < numTriangles) {
-                    triangleIndices_t triangleIndices = indexPtr[globalMemIdx];
-                    auto& sh_tInfoRef = sh_triangleInfoPtr[sharedMemIdx];
+                    triangleIndices_t triangleIndices = triangleIndPtr[globalMemIdx];
+                    fullTriangleInfo_t tInfo(getTriangle3D(triangleIndices, meshVertexPtr),
+                                             getTriangle2D(triangleIndices, vertex2DPtr),
+                                             tVarsPtr[globalMemIdx]);
 
-                    sh_tInfoRef.coords3D = getTriangle3D(triangleIndices, meshVertexPtr);
-                    sh_tInfoRef.coords2D = getTriangle2D(triangleIndices, vertex2DPtr);
-                    sh_tInfoRef.triangleVars = tVarsPtr[globalMemIdx];
+                    sh_triangleInfoPtr[sharedMemIdx] = tInfo;
                 }
 
                 __syncthreads();

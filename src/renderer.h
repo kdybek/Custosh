@@ -10,7 +10,7 @@ namespace Custosh::Renderer
 
     void loadTransformMatrix(const TransformMatrix& tm, unsigned int meshIdx);
 
-    void draw();
+    void transformVerticesAndDraw();
 
 } // Custosh::Renderer
 

@@ -8,8 +8,8 @@ namespace Custosh
     {
     public:
         explicit SceneImpl(const lightSource_t& ls)
-                : m_vertices(0),
-                  m_triangles(0),
+                : m_vertices(),
+                  m_triangles(),
                   m_lightSource(ls),
                   m_nextMeshIdx(0)
         {
@@ -19,17 +19,13 @@ namespace Custosh
         unsigned int add(const Mesh& mesh)
         {
             const unsigned int firstVertexIdx = m_vertices.size();
-            const unsigned int firstTriangleIdx = m_triangles.size();
 
-            m_vertices.resizeAndCopy(m_vertices.size() + mesh.vertices().size());
-            m_triangles.resizeAndCopy(m_triangles.size() + mesh.triangles().size());
-
-            for (unsigned int i = firstVertexIdx; i < m_vertices.size(); ++i) {
-                m_vertices.get()[i] = meshVertex_t(mesh.vertices()[i - firstVertexIdx], m_nextMeshIdx);
+            for (const auto& vertex: mesh.vertices()) {
+                m_vertices.pushBack(meshVertex_t(vertex, m_nextMeshIdx));
             }
 
-            for (unsigned int i = firstTriangleIdx; i < m_triangles.size(); ++i) {
-                m_triangles.get()[i] = offsetTriangleIndices(mesh.triangles()[i - firstTriangleIdx], firstVertexIdx);
+            for (const auto& triangle: mesh.triangles()) {
+                m_triangles.pushBack(offsetTriangleIndices(triangle, firstVertexIdx));
             }
 
             return m_nextMeshIdx++;
@@ -37,12 +33,12 @@ namespace Custosh
 
         void loadVerticesToDev(meshVertex_t* devPtr) const
         {
-            m_vertices.loadToDev(devPtr);
+            m_vertices.hostPtr().loadToDev(devPtr, m_vertices.size());
         }
 
         void loadTrianglesToDev(triangleIndices_t* devPtr) const
         {
-            m_triangles.loadToDev(devPtr);
+            m_triangles.hostPtr().loadToDev(devPtr, m_triangles.size());
         }
 
         [[nodiscard]] inline unsigned int numVertices() const
@@ -58,8 +54,8 @@ namespace Custosh
         { return m_lightSource; }
 
     private:
-        HostPtr<meshVertex_t> m_vertices;
-        HostPtr<triangleIndices_t> m_triangles;
+        HostDynamicArray<meshVertex_t> m_vertices;
+        HostDynamicArray<triangleIndices_t> m_triangles;
         lightSource_t m_lightSource;
         unsigned int m_nextMeshIdx;
 
@@ -70,14 +66,11 @@ namespace Custosh
 
     }; // Scene::SceneImpl
 
-    Scene::Scene(const lightSource_t& ls) : m_implPtr(new SceneImpl(ls))
+    Scene::Scene(const lightSource_t& ls) : m_implPtr(std::make_unique<SceneImpl>(ls))
     {
     }
 
-    Scene::~Scene()
-    {
-        delete m_implPtr;
-    }
+    Scene::~Scene() = default;
 
     unsigned int Scene::add(const Mesh& mesh)
     {

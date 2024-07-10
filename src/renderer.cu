@@ -471,7 +471,7 @@ namespace Custosh::Renderer
                 getTransformHostPtr().get()[i] = IDENTITY_MATRIX;
             }
 
-            getTransformHostPtr().loadToDev(getTransformDevPtr().get());
+            getTransformHostPtr().loadToDev(getTransformDevPtr().get(), getTransformHostPtr().size());
         }
 
         __host__ void setLightSource(const lightSource_t& ls)
@@ -497,7 +497,8 @@ namespace Custosh::Renderer
         __host__ void fetchAndDrawChars(unsigned int screenRows,
                                         unsigned int screenCols)
         {
-            getCharDevPtr().loadToHost(getCharHostPtr().get());
+            // This is slow, but if I want to draw in the terminal there is no way to bypass the CPU as far as I know.
+            getCharDevPtr().loadToHost(getCharHostPtr().get(), getCharDevPtr().size());
             getInactiveBuf().draw(getCharHostPtr().get(), screenRows, screenCols);
             getInactiveBuf().activate();
             std::swap(getActiveBuf(), getInactiveBuf());
@@ -523,10 +524,10 @@ namespace Custosh::Renderer
 
         getTransformHostPtr().get()[meshIdx] = tm;
 
-        getTransformHostPtr().loadToDev(getTransformDevPtr().get());
+        getTransformHostPtr().loadToDev(getTransformDevPtr().get(), getTransformHostPtr().size());
     }
 
-    __host__ void draw()
+    __host__ void transformVerticesAndDraw()
     {
         Vector2<unsigned int> windowDim = getInactiveBuf().getWindowDimensions();
 

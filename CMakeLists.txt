@@ -33,7 +33,7 @@ target_include_directories(custosh_lib PRIVATE "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIR
 target_include_directories(custosh_lib PUBLIC include)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(custosh_lib PRIVATE DEBUG)
+    target_compile_definitions(custosh_lib PRIVATE CUSTOSH_DEBUG)
 endif()
 
 add_executable(example example/main.cpp)

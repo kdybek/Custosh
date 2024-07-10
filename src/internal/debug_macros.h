@@ -2,7 +2,7 @@
 #define CUSTOSH_DEBUG_MACROS_H
 
 
-#ifdef DEBUG
+#ifdef CUSTOSH_DEBUG
 #include <chrono>
 #include <string>
 #include "logger.h"
@@ -20,7 +20,7 @@
     } while (0)
 #else
 #define CUSTOSH_DEBUG_LOG_TIME(call, message) call;
-#endif // DEBUG
+#endif // CUSTOSH_DEBUG
 
 
 #endif // CUSTOSH_DEBUG_MACROS_H

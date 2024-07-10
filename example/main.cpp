@@ -92,7 +92,7 @@ int init()
     for (int i = 0; i < 500; ++i) {
         auto start = std::chrono::high_resolution_clock::now();
 
-        Renderer::draw();
+        Renderer::transformVerticesAndDraw();
 
         auto end = std::chrono::high_resolution_clock::now();
 

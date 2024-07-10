@@ -2,6 +2,9 @@
 #define CUSTOSH_SCENE_H
 
 
+#include <memory>
+#include <vector>
+
 #include "utility.h"
 
 namespace Custosh
@@ -51,7 +54,7 @@ namespace Custosh
     private:
         // Hiding the hostPtr class.
         class SceneImpl;
-        SceneImpl* m_implPtr;
+        std::unique_ptr<SceneImpl> m_implPtr;
 
     }; // Scene
 

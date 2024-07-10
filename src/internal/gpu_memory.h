@@ -20,6 +20,8 @@ do { \
 
 namespace Custosh
 {
+    constexpr inline unsigned int DARR_BASE_SIZE = 8;
+
     template<typename T>
     class HostPtr
     {
@@ -87,12 +89,12 @@ namespace Custosh
             }
         }
 
-        void loadToDev(T* devPtr) const
+        void loadToDev(T* devPtr, unsigned int size) const
         {
-            CUSTOSH_CUDA_CHECK(cudaMemcpy(devPtr, m_hostPtr, m_size * sizeof(T), cudaMemcpyHostToDevice));
+            CUSTOSH_CUDA_CHECK(cudaMemcpy(devPtr, m_hostPtr, size * sizeof(T), cudaMemcpyHostToDevice));
         }
 
-        [[nodiscard]] inline T* get() const
+        [[nodiscard]] inline T* get()
         { return m_hostPtr; }
 
         [[nodiscard]] inline unsigned int size() const
@@ -171,12 +173,12 @@ namespace Custosh
             }
         }
 
-        void loadToHost(T* hostPtr) const
+        void loadToHost(T* hostPtr, unsigned int size) const
         {
-            CUSTOSH_CUDA_CHECK(cudaMemcpy(hostPtr, m_devPtr, m_size * sizeof(T), cudaMemcpyDeviceToHost));
+            CUSTOSH_CUDA_CHECK(cudaMemcpy(hostPtr, m_devPtr, size * sizeof(T), cudaMemcpyDeviceToHost));
         }
 
-        [[nodiscard]] inline T* get() const
+        [[nodiscard]] inline T* get()
         { return m_devPtr; }
 
         [[nodiscard]] inline unsigned int size() const
@@ -187,6 +189,35 @@ namespace Custosh
         unsigned int m_size;
 
     }; // DevPtr
+
+    template <typename T>
+    class HostDynamicArray
+    {
+    public:
+        HostDynamicArray() : m_hostPtr(DARR_BASE_SIZE), m_numElements(0)
+        {
+        }
+
+        void pushBack(const T& t)
+        {
+            if (m_numElements == m_hostPtr.size()) {
+                m_hostPtr.resizeAndCopy(m_hostPtr.size() * 2);
+            }
+
+            m_hostPtr.get()[m_numElements++] = t;
+        }
+
+        [[nodiscard]] inline const HostPtr<T>& hostPtr() const
+        { return m_hostPtr; }
+
+        [[nodiscard]] inline unsigned int size() const
+        { return m_numElements; }
+
+    private:
+        HostPtr<T> m_hostPtr;
+        unsigned int m_numElements;
+
+    }; // HostDynamicArray
 
 } // Custosh
 

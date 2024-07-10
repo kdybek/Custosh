@@ -3,7 +3,6 @@
 #include <algorithm>
 
 #include <custosh.h>
-#include <iostream>
 
 using namespace Custosh;
 

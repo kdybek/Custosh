@@ -53,7 +53,7 @@ namespace Custosh
         std::cout << "[" << getCurrentTime() << "] " << logLevelToString(level) << ": " << message << '\n';
     }
 
-    FileLogger::FileLogger(const std::string& filename) : m_file(filename, std::ios::app)
+    FileLogger::FileLogger(const std::string& filename) : m_file(filename, std::ios::trunc)
     {
         if (!m_file.is_open()) {
             throw CustoshException("could not open log file");

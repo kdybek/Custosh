@@ -36,6 +36,10 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(custosh_lib PRIVATE CUSTOSH_DEBUG)
 endif()
 
-add_executable(example example/main.cpp)
+add_executable(tutorial examples/tutorial.cpp)
 
-target_link_libraries(example custosh_lib)
+add_executable(test examples/test.cpp)
+
+target_link_libraries(tutorial custosh_lib)
+
+target_link_libraries(test custosh_lib)

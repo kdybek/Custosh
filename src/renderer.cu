@@ -91,7 +91,7 @@ namespace Custosh::Renderer
         constexpr Vertex3D CCV_MIN_CORNER = {-1.f, -1.f, -1.f};
         constexpr Vertex3D CCV_MAX_CORNER = {1.f, 1.f, 1.f};
         constexpr float PM_NEAR_PLANE = 1.f;
-        constexpr float PM_FAR_PLANE = 10.f;
+        constexpr float PM_FAR_PLANE = 1000.f;
         constexpr unsigned int THREADS_PER_BLOCK = 256;
         constexpr unsigned int THREADS_PER_BLOCK_X = 16;
         constexpr unsigned int THREADS_PER_BLOCK_Y = 16;

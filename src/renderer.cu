@@ -111,10 +111,10 @@ namespace Custosh::Renderer
         /* @formatter:off */
 
         /* Host global variables */
-        WindowsConsoleScreenBuffer& getActiveBuf() { static WindowsConsoleScreenBuffer s_activeBuf; return s_activeBuf; }
-        WindowsConsoleScreenBuffer& getInactiveBuf() { static WindowsConsoleScreenBuffer s_inactiveBuf; return s_inactiveBuf; }
-        HostPtr<char>& getCharHostPtr() { static HostPtr<char> s_charHostPtr(BASE_DEV_WSPACE_SIZE); return s_charHostPtr; }
+        WindowsConsoleScreenBuffer& getFrontBuffer() { static WindowsConsoleScreenBuffer s_frontBuffer; return s_frontBuffer; }
+        WindowsConsoleScreenBuffer& getBackBuffer() { static WindowsConsoleScreenBuffer s_backBuffer; return s_backBuffer; }
         HostPtr<TransformMatrix>& getTransformHostPtr() { static HostPtr<TransformMatrix> s_transformHostPtr(BASE_DEV_WSPACE_SIZE); return s_transformHostPtr; }
+        HostPtr<char>& getCharHostPtr() { static HostPtr<char> s_charHostPtr(BASE_DEV_WSPACE_SIZE); return s_charHostPtr; }
 
         /* Device working space pointers */
         DevPtr<meshVertex_t>& getMeshVertexDevPtr() { static DevPtr<meshVertex_t> s_vertex3DDevPtr(BASE_DEV_WSPACE_SIZE); return s_vertex3DDevPtr; }
@@ -404,11 +404,11 @@ namespace Custosh::Renderer
             getTransformHostPtr().resizeAndDiscardData(numMeshes);
         }
 
-        __host__ void resizeScreenDependentPtrs(unsigned int windowRows,
-                                                unsigned int windowCols)
+        __host__ void resizeScreenDependentPtrs(unsigned int screenRows,
+                                                unsigned int screenCols)
         {
-            getCharHostPtr().resizeAndDiscardData(windowRows * windowCols);
-            getCharDevPtr().resizeAndDiscardData(windowRows * windowCols);
+            getCharHostPtr().resizeAndDiscardData(screenRows * screenCols);
+            getCharDevPtr().resizeAndDiscardData(screenRows * screenCols);
         }
 
         __host__ void callVertexShader(const PerspectiveProjMatrix& PPM)
@@ -443,17 +443,17 @@ namespace Custosh::Renderer
             CUSTOSH_CUDA_CHECK(cudaGetLastError());
         }
 
-        __host__ void callFragmentShader(unsigned int windowRows,
-                                         unsigned int windowCols)
+        __host__ void callFragmentShader(unsigned int screenRows,
+                                         unsigned int screenCols)
         {
             unsigned int numTriangles = getTriangleDevPtr().size();
 
             dim3 threadsPerBlock(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y);
-            dim3 numBlocks((windowCols + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                           (windowRows + threadsPerBlock.y - 1) / threadsPerBlock.y);
+            dim3 numBlocks((screenCols + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                           (screenRows + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-            fragmentShader<<<numBlocks, threadsPerBlock>>>(windowRows,
-                                                           windowCols,
+            fragmentShader<<<numBlocks, threadsPerBlock>>>(screenRows,
+                                                           screenCols,
                                                            getTriangleDevPtr().get(),
                                                            numTriangles,
                                                            getVertex2DDevPtr().get(),
@@ -494,14 +494,12 @@ namespace Custosh::Renderer
             callFragmentShader(screenRows, screenCols);
         }
 
-        __host__ void fetchAndDrawChars(unsigned int screenRows,
-                                        unsigned int screenCols)
+        __host__ void drawChars(unsigned int screenRows,
+                                unsigned int screenCols)
         {
-            // This is slow, but if I want to draw in the terminal there is no way to bypass the CPU as far as I know.
-            getCharDevPtr().loadToHost(getCharHostPtr().get(), getCharDevPtr().size());
-            getInactiveBuf().draw(getCharHostPtr().get(), screenRows, screenCols);
-            getInactiveBuf().activate();
-            std::swap(getActiveBuf(), getInactiveBuf());
+            getBackBuffer().draw(getCharHostPtr().get(), screenRows, screenCols);
+            getBackBuffer().activate();
+            std::swap(getFrontBuffer(), getBackBuffer());
         }
 
     } // anonymous
@@ -529,20 +527,25 @@ namespace Custosh::Renderer
 
     __host__ void transformVerticesAndDraw()
     {
-        Vector2<unsigned int> windowDim = getInactiveBuf().getWindowDimensions();
+        Vector2<unsigned int> screenDim = getBackBuffer().getWindowDimensions();
 
-        windowDim.x() = std::min(windowDim.x(), windowDim.y());
-        windowDim.y() = std::min(windowDim.x(), windowDim.y());
+        screenDim.x() = std::min(screenDim.x(), screenDim.y());
+        screenDim.y() = std::min(screenDim.x(), screenDim.y());
 
-        if (windowDim.x() == 0 || windowDim.y() == 0) { return; }
+        if (screenDim.x() == 0 || screenDim.y() == 0) { return; }
 
-        PerspectiveProjMatrix ppm = CCV2ScreenPPM(windowDim.y(), windowDim.x());
+        PerspectiveProjMatrix ppm = CCV2ScreenPPM(screenDim.y(), screenDim.x());
 
-        resizeScreenDependentPtrs(windowDim.y(), windowDim.x());
+        resizeScreenDependentPtrs(screenDim.y(), screenDim.x());
 
-        CUSTOSH_DEBUG_LOG_TIME(renderingPipeline(windowDim.y(), windowDim.x(), ppm), "rendering pipeline");
+        CUSTOSH_DEBUG_LOG_TIME(renderingPipeline(screenDim.y(), screenDim.x(), ppm), "rendering pipeline");
 
-        CUSTOSH_DEBUG_LOG_TIME(fetchAndDrawChars(windowDim.y(), windowDim.x()), "fetch and draw");
+        // This is slow, but if I want to draw in the terminal there is no way to bypass the CPU as far as I know.
+        CUSTOSH_DEBUG_LOG_TIME(getCharDevPtr().loadToHost(getCharHostPtr().get(), screenDim.y() * screenDim.x()),
+                               "fetch data from GPU");
+
+        // This is currently the biggest bottleneck, but works fine most of the time.
+        CUSTOSH_DEBUG_LOG_TIME(drawChars(screenDim.y(), screenDim.x()), "write to terminal");
     }
 
 } // Custosh::Renderer

@@ -56,7 +56,9 @@ namespace Custosh
             for (unsigned int i = 0; i < rows; ++i) {
                 DWORD charsWritten;
                 COORD coord = {0, static_cast<SHORT>(rows - i - 1)};
-                WriteConsoleOutputCharacter(m_handle, str + i * cols, cols, coord, &charsWritten);
+                if (!WriteConsoleOutputCharacter(m_handle, str + i * cols, cols, coord, &charsWritten)) {
+                    throw CustoshException("error writing to the console screen buffer");
+                }
                 // Number of written chars is ignored to not waste time.
             }
         }

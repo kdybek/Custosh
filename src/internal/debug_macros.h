@@ -3,9 +3,31 @@
 
 
 #ifdef CUSTOSH_DEBUG
+
 #include <chrono>
 #include <string>
 #include "logger.h"
+
+#define CUSTOSH_DEBUG_CALL(call) \
+    do{ \
+        call; \
+    } while (0)
+
+#define CUSTOSH_DEBUG_TRACE(message) \
+    do { \
+        LoggerManager::log(LogLevel::Trace, message); \
+    } while (0)
+
+#define CUSTOSH_DEBUG_INFO(message) \
+    do { \
+        LoggerManager::log(LogLevel::Info, message); \
+    } while (0)
+
+#define CUSTOSH_DEBUG_ERROR(message) \
+    do { \
+        LoggerManager::log(LogLevel::Error, message); \
+    } while (0)
+
 #define CUSTOSH_DEBUG_LOG_TIME(call, message) \
     do { \
         auto start = std::chrono::high_resolution_clock::now(); \
@@ -16,10 +38,20 @@
         logMsg += " - "; \
         logMsg += std::to_string(elapsed.count()); \
         logMsg += "ms"; \
-        LoggerManager::log(LogLevel::Trace, logMsg); \
+        CUSTOSH_DEBUG_INFO(logMsg); \
     } while (0)
 #else
+
+#define CUSTOSH_DEBUG_CALL(call)
+
+#define CUSTOSH_DEBUG_TRACE(message)
+
+#define CUSTOSH_DEBUG_INFO(message)
+
+#define CUSTOSH_DEBUG_ERROR(message)
+
 #define CUSTOSH_DEBUG_LOG_TIME(call, message) call;
+
 #endif // CUSTOSH_DEBUG
 
 

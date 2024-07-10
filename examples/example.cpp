@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <thread>
-#include <algorithm>
 
 #include <custosh.h>
 
@@ -12,6 +11,7 @@ void rotatingCubesExample()
 {
     /* *
      * If you define CMAKE_BUILD_TYPE as "Debug" the library will log performance information.
+     * Warning: time measuring has a noticeable impact on performance.
      * You can specify where to write the logs by adding Loggers.
      * The FileLogger truncates specified files.
      * */
@@ -24,7 +24,7 @@ void rotatingCubesExample()
      * Only triangles whose vertices are in a clockwise order when projected onto the near plane of the view frustum will be rendered.
      * For more parameter info consult the constants section in renderer.cu.
      * */
-    std::vector<Vector3<float>> cube1Ver;
+    std::vector<Vertex3D> cube1Ver;
     cube1Ver.push_back({-1.5f, -0.5f, 2.f});
     cube1Ver.push_back({-0.5f, -0.5f, 2.f});
     cube1Ver.push_back({-1.5f, 0.5f, 2.f});
@@ -35,7 +35,7 @@ void rotatingCubesExample()
     cube1Ver.push_back({-1.5f, 0.5f, 3.f});
     cube1Ver.push_back({-0.5f, 0.5f, 3.f});
 
-    std::vector<Vector3<float>> cube2Ver;
+    std::vector<Vertex3D> cube2Ver;
     cube2Ver.push_back({0.5f, -0.5f, 2.f});
     cube2Ver.push_back({1.5f, -0.5f, 2.f});
     cube2Ver.push_back({0.5f, 0.5f, 2.f});
@@ -65,8 +65,6 @@ void rotatingCubesExample()
     Mesh cube1(cube1Ver, cubeInd);
     Mesh cube2(cube2Ver, cubeInd);
 
-    lightSource_t ls({1.f, 0.f, 0.f}, 0.7f);
-
     float rotationAngle1 = degreesToRadians(1.5f);
     float rotationAngle2 = degreesToRadians(1.f);
     float rotationAngle3 = degreesToRadians(0.5f);
@@ -82,6 +80,8 @@ void rotatingCubesExample()
      * Currently there can only be one light source per scene.
      * Shadows are not being calculated yet.
      * */
+    lightSource_t ls({1.f, 0.f, 0.f}, 0.7f);
+
     Scene scene(ls);
 
     unsigned int cube1Idx = scene.add(cube1);

@@ -557,13 +557,13 @@ namespace Custosh
 
     }; // DecentralizedRotationMatrix
 
-    class OrtProjMatrix : public Matrix<float, 4, 4>
+    class OrthographicProjectionMatrix : public Matrix<float, 4, 4>
     {
     public:
-        CUSTOSH_HOST_DEV_MEMBER OrtProjMatrix(const Vector3<float>& fromMinCorner,
-                                              const Vector3<float>& fromMaxCorner,
-                                              const Vector3<float>& toMinCorner,
-                                              const Vector3<float>& toMaxCorner)
+        CUSTOSH_HOST_DEV_MEMBER OrthographicProjectionMatrix(const Vector3<float>& fromMinCorner,
+                                                             const Vector3<float>& fromMaxCorner,
+                                                             const Vector3<float>& toMinCorner,
+                                                             const Vector3<float>& toMaxCorner)
                 : Matrix<float, 4, 4>(init(fromMinCorner,
                                            fromMaxCorner,
                                            toMinCorner,
@@ -603,10 +603,10 @@ namespace Custosh
 
     }; // OrtProjMatrix
 
-    class PerspectiveProjMatrix : public Matrix<float, 4, 4>
+    class PerspectiveProjectionMatrix : public Matrix<float, 4, 4>
     {
     public:
-        CUSTOSH_HOST_DEV_MEMBER PerspectiveProjMatrix(const PerspectiveMatrix& pm, const OrtProjMatrix& opm)
+        CUSTOSH_HOST_DEV_MEMBER PerspectiveProjectionMatrix(const PerspectiveMatrix& pm, const OrthographicProjectionMatrix& opm)
                 : Matrix<float, 4, 4>(opm * pm)
         {
         }

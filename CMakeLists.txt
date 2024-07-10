@@ -36,7 +36,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(custosh_lib PRIVATE CUSTOSH_DEBUG)
 endif()
 
-add_executable(tutorial examples/tutorial.cpp)
+add_executable(tutorial examples/example.cpp)
 
 add_executable(test examples/test.cpp)
 

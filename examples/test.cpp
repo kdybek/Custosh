@@ -1,36 +1,28 @@
+/* Performance testing */
+
 #include <chrono>
 #include <thread>
-#include <algorithm>
+#include <random>
 
 #include <custosh.h>
 
 using namespace Custosh;
 
-int init()
+// Checking for static initialization order fiasco while we're at it.
+int realMain()
 {
     LoggerManager::addLogger(std::make_unique<ConsoleLogger>(ConsoleLogger()));
 
-    std::vector<Vector3<float>> cube1Ver;
-    cube1Ver.push_back({-1.5, -0.5, 2});
-    cube1Ver.push_back({-0.5, -0.5, 2});
-    cube1Ver.push_back({-1.5, 0.5, 2});
-    cube1Ver.push_back({-0.5, 0.5, 2});
+    std::vector<Vertex3D> cube1Ver;
+    cube1Ver.push_back({-0.5f, -0.5f, 3.f});
+    cube1Ver.push_back({0.5f, -0.5f, 3.f});
+    cube1Ver.push_back({-0.5f, 0.5f, 3.f});
+    cube1Ver.push_back({0.5f, 0.5f, 3.f});
 
-    cube1Ver.push_back({-1.5, -0.5, 3});
-    cube1Ver.push_back({-0.5, -0.5, 3});
-    cube1Ver.push_back({-1.5, 0.5, 3});
-    cube1Ver.push_back({-0.5, 0.5, 3});
-
-    std::vector<Vector3<float>> cube2Ver;
-    cube2Ver.push_back({0.5, -0.5, 2});
-    cube2Ver.push_back({1.5, -0.5, 2});
-    cube2Ver.push_back({0.5, 0.5, 2});
-    cube2Ver.push_back({1.5, 0.5, 2});
-
-    cube2Ver.push_back({0.5, -0.5, 3});
-    cube2Ver.push_back({1.5, -0.5, 3});
-    cube2Ver.push_back({0.5, 0.5, 3});
-    cube2Ver.push_back({1.5, 0.5, 3});
+    cube1Ver.push_back({-0.5f, -0.5f, 4.f});
+    cube1Ver.push_back({0.5f, -0.5f, 4.f});
+    cube1Ver.push_back({-0.5f, 0.5f, 4.f});
+    cube1Ver.push_back({0.5f, 0.5f, 4.f});
 
     std::vector<triangleIndices_t> cubeInd;
     cubeInd.emplace_back(0, 1, 2);
@@ -48,26 +40,37 @@ int init()
     cubeInd.emplace_back(4, 0, 6);
     cubeInd.emplace_back(6, 0, 2);
 
-    Mesh cube1(cube1Ver, cubeInd);
-    Mesh cube2(cube2Ver, cubeInd);
+    float rotationAngle1 = degreesToRadians(1.5f);
+    float rotationAngle2 = degreesToRadians(1.f);
+    float rotationAngle3 = degreesToRadians(0.5f);
 
-    lightSource_t ls({1, 0, 0}, 0.7);
+    Vector3<float> rotationVec1 = {0.f, 1.f, 0.f};
+    Vector3<float> rotationVec2 = {1.f, 0.f, 0.f};
+    Vector3<float> rotationVec3 = {0.f, 0.f, 1.f};
 
-    float rotationAngle1 = degreesToRadians(1.5);
-    float rotationAngle2 = degreesToRadians(1);
-    float rotationAngle3 = degreesToRadians(0.5);
+    Vertex3D origin1 = {0.f, 0.f, 3.5f};
 
-    Vector3<float> rotationVec1 = {0, 1, 0};
-    Vector3<float> rotationVec2 = {1, 0, 0};
-    Vector3<float> rotationVec3 = {0, 0, 1};
-
-    Vertex3D origin1 = {-1, 0, 2.5};
-    Vertex3D origin2 = {1, 0, 2.5};
+    lightSource_t ls({1.f, 0.f, 0.f}, 0.9f);
 
     Scene scene(ls);
 
-    scene.add(cube1);
-    scene.add(cube2);
+    unsigned int numCubes = 100000;
+
+    std::mt19937 gen(42);
+    std::uniform_real_distribution<float> dis(-1.f, 1.f);
+
+    for (unsigned int i = 0; i < numCubes; ++i) {
+        std::vector<Vertex3D> res;
+        float xRandomNum = dis(gen);
+        float yRandomNum = dis(gen);
+        float zRandomNum = dis(gen);
+
+        for (const auto& vertex: cube1Ver) {
+            res.push_back({vertex.x() + xRandomNum, vertex.y() + yRandomNum, vertex.z() + zRandomNum});
+        }
+
+        scene.add(Mesh(res, cubeInd));
+    }
 
     Renderer::loadScene(scene);
 
@@ -78,35 +81,18 @@ int init()
     TransformMatrix rotationMat3 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle3),
                                                                 origin1);
 
-    TransformMatrix rotationMat4 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle1),
-                                                                origin2);
-    TransformMatrix rotationMat5 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle2),
-                                                                origin2);
-    TransformMatrix rotationMat6 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle3),
-                                                                origin2);
-
-    Renderer::loadTransformMatrix(rotationMat1 * rotationMat2 * rotationMat3, 0);
-
-    Renderer::loadTransformMatrix(rotationMat4 * rotationMat5 * rotationMat6, 1);
-
-    for (int i = 0; i < 500; ++i) {
-        auto start = std::chrono::high_resolution_clock::now();
-
-        Renderer::transformVerticesAndDraw();
-
-        auto end = std::chrono::high_resolution_clock::now();
-
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(std::max((long long) 0, 15 - elapsed.count())));
+    for (unsigned int i = 0; i < numCubes; ++i) {
+        Renderer::loadTransformMatrix(rotationMat1 * rotationMat2 * rotationMat3, i);
     }
+
+    Renderer::transformVerticesAndDraw();
 
     return 42;
 }
 
 namespace
 {
-    int i = init();
+    int a = realMain();
 }
 
 int main()

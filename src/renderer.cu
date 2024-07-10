@@ -86,24 +86,55 @@ namespace Custosh::Renderer
             }
         };
 
+        struct triangleVariables_t
+        {
+            float area2x;
+            boundingBox_t boundingBox;
+            Vector3<float> normal;
+
+            __host__ __device__ explicit triangleVariables_t(
+                    float area2x = 0.f,
+                    boundingBox_t boundingBox = boundingBox_t(),
+                    Vector3<float> normal = Vector3<float>()
+            ) : area2x(area2x), boundingBox(boundingBox), normal(normal)
+            {
+            }
+        };
+
+        struct fullTriangleInfo_t
+        {
+            triangle3D_t coords3D;
+            triangle2D_t coords2D;
+            triangleVariables_t triangleVars;
+
+            __host__ __device__ explicit fullTriangleInfo_t(
+                    triangle3D_t coords3D = triangle3D_t(),
+                    triangle2D_t coords2D = triangle2D_t(),
+                    triangleVariables_t triangleVars = triangleVariables_t()
+            ) : coords3D(coords3D), coords2D(coords2D), triangleVars(triangleVars)
+            {
+            }
+        };
+
         /* Host constants */
-        constexpr unsigned int BASE_DEV_WSPACE_SIZE = 8;
-        constexpr Vertex3D CCV_MIN_CORNER = {-1.f, -1.f, -1.f};
-        constexpr Vertex3D CCV_MAX_CORNER = {1.f, 1.f, 1.f};
-        constexpr float PM_NEAR_PLANE = 1.f;
-        constexpr float PM_FAR_PLANE = 1000.f;
-        constexpr unsigned int THREADS_PER_BLOCK = 256;
-        constexpr unsigned int THREADS_PER_BLOCK_X = 16;
-        constexpr unsigned int THREADS_PER_BLOCK_Y = 16;
-        constexpr TransformMatrix IDENTITY_MATRIX = {{1.f, 0.f, 0.f, 0.f},
-                                                     {0.f, 1.f, 0.f, 0.f},
-                                                     {0.f, 0.f, 1.f, 0.f},
-                                                     {0.f, 0.f, 0.f, 1.f}};
+        constexpr unsigned int H_BASE_DEV_WSPACE_SIZE = 8;
+        constexpr Vertex3D H_CCV_MIN_CORNER = {-1.f, -1.f, -1.f};
+        constexpr Vertex3D H_CCV_MAX_CORNER = {1.f, 1.f, 1.f};
+        constexpr float H_PM_NEAR_PLANE = 1.f;
+        constexpr float H_PM_FAR_PLANE = 1000.f;
+        constexpr unsigned int H_THREADS_PER_BLOCK_X = 8;
+        constexpr unsigned int H_THREADS_PER_BLOCK_Y = 8;
+        constexpr unsigned int H_THREADS_PER_BLOCK = H_THREADS_PER_BLOCK_X * H_THREADS_PER_BLOCK_Y;
+        constexpr TransformMatrix H_IDENTITY_MATRIX = {{1.f, 0.f, 0.f, 0.f},
+                                                       {0.f, 1.f, 0.f, 0.f},
+                                                       {0.f, 0.f, 1.f, 0.f},
+                                                       {0.f, 0.f, 0.f, 1.f}};
 
         /* Device constants */
-        __constant__ constexpr char g_devASCIIByBrightness[93] =
+        __constant__ constexpr char D_ASCII_BY_BRIGHTNESS[93] =
                 R"( `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@)";
-        __constant__ constexpr unsigned int g_devNumASCII = 92;
+        __constant__ constexpr unsigned int D_NUM_ASCII = 92;
+        __constant__ constexpr unsigned int D_THREADS_PER_BLOCK = H_THREADS_PER_BLOCK;
 
         /* Device global variables */
         __constant__ constinit lightSource_t g_devLightSource;
@@ -113,18 +144,16 @@ namespace Custosh::Renderer
         /* Host global variables */
         WindowsConsoleScreenBuffer& getFrontBuffer() { static WindowsConsoleScreenBuffer s_frontBuffer; return s_frontBuffer; }
         WindowsConsoleScreenBuffer& getBackBuffer() { static WindowsConsoleScreenBuffer s_backBuffer; return s_backBuffer; }
-        HostPtr<TransformMatrix>& getTransformHostPtr() { static HostPtr<TransformMatrix> s_transformHostPtr(BASE_DEV_WSPACE_SIZE); return s_transformHostPtr; }
-        HostPtr<char>& getCharHostPtr() { static HostPtr<char> s_charHostPtr(BASE_DEV_WSPACE_SIZE); return s_charHostPtr; }
+        HostPtr<TransformMatrix>& getTransformHostPtr() { static HostPtr<TransformMatrix> s_transformHostPtr(H_BASE_DEV_WSPACE_SIZE); return s_transformHostPtr; }
+        HostPtr<char>& getFrameBufferHostPtr() { static HostPtr<char> s_frameBufferHostPtr(H_BASE_DEV_WSPACE_SIZE); return s_frameBufferHostPtr; }
 
         /* Device working space pointers */
-        DevPtr<meshVertex_t>& getMeshVertexDevPtr() { static DevPtr<meshVertex_t> s_vertex3DDevPtr(BASE_DEV_WSPACE_SIZE); return s_vertex3DDevPtr; }
-        DevPtr<triangleIndices_t>& getTriangleDevPtr() { static DevPtr<triangleIndices_t> s_triangleDevPtr(BASE_DEV_WSPACE_SIZE); return s_triangleDevPtr; }
-        DevPtr<TransformMatrix>& getTransformDevPtr() { static DevPtr<TransformMatrix> s_transformDevPtr(BASE_DEV_WSPACE_SIZE); return s_transformDevPtr; }
-        DevPtr<Vertex2D>& getVertex2DDevPtr() { static DevPtr<Vertex2D> s_vertex2DDevPtr(BASE_DEV_WSPACE_SIZE); return s_vertex2DDevPtr; }
-        DevPtr<boundingBox_t>& getBoundingBoxDevPtr() { static DevPtr<boundingBox_t> s_boundingBoxDevPtr(BASE_DEV_WSPACE_SIZE); return s_boundingBoxDevPtr; }
-        DevPtr<float>& getTriangleCross2DDevPtr() { static DevPtr<float> s_triangleCross2DDevPtr(BASE_DEV_WSPACE_SIZE); return s_triangleCross2DDevPtr; }
-        DevPtr<Vector3<float>>& getTriangleNormalDevPtr() { static DevPtr<Vector3<float>> s_triangleNormalDevPtr(BASE_DEV_WSPACE_SIZE); return s_triangleNormalDevPtr; }
-        DevPtr<char>& getCharDevPtr() { static DevPtr<char> s_charDevPtr(BASE_DEV_WSPACE_SIZE); return s_charDevPtr; }
+        DevPtr<meshVertex_t>& getMeshVertexDevPtr() { static DevPtr<meshVertex_t> s_meshVectorDevPtr(H_BASE_DEV_WSPACE_SIZE); return s_meshVectorDevPtr; }
+        DevPtr<triangleIndices_t>& getTriangleIndDevPtr() { static DevPtr<triangleIndices_t> s_triangleIndDevPtr(H_BASE_DEV_WSPACE_SIZE); return s_triangleIndDevPtr; }
+        DevPtr<TransformMatrix>& getTransformDevPtr() { static DevPtr<TransformMatrix> s_transformDevPtr(H_BASE_DEV_WSPACE_SIZE); return s_transformDevPtr; }
+        DevPtr<Vertex2D>& getVertex2DDevPtr() { static DevPtr<Vertex2D> s_vertex2DDevPtr(H_BASE_DEV_WSPACE_SIZE); return s_vertex2DDevPtr; }
+        DevPtr<triangleVariables_t>& getTriangleVarsPtr() { static DevPtr<triangleVariables_t> s_triangleVarsPtr(H_BASE_DEV_WSPACE_SIZE); return s_triangleVarsPtr; }
+        DevPtr<char>& getFrameBufferDevPtr() { static DevPtr<char> s_frameBufferDevPtr(H_BASE_DEV_WSPACE_SIZE); return s_frameBufferDevPtr; }
 
         /* @formatter:on */
 
@@ -159,8 +188,8 @@ namespace Custosh::Renderer
 
         [[nodiscard]] __device__ char brightnessToASCII(float brightness)
         {
-            unsigned int idx = ceil(brightness * static_cast<float>(g_devNumASCII - 1));
-            return g_devASCIIByBrightness[idx];
+            unsigned int idx = ceil(brightness * static_cast<float>(D_NUM_ASCII - 1));
+            return D_ASCII_BY_BRIGHTNESS[idx];
         }
 
         [[nodiscard]] __device__ boundingBox_t findBounds(const triangle2D_t& triangle2D)
@@ -287,105 +316,128 @@ namespace Custosh::Renderer
         }
 
         /* Kernels */
-        __global__ void vertexShader(meshVertex_t* vertex3DPtr,
+        __global__ void vertexShader(meshVertex_t* meshVertexPtr,
                                      unsigned int numVertices,
                                      const TransformMatrix* transformMatPtr,
-                                     PerspectiveProjMatrix ppm,
+                                     PerspectiveProjectionMatrix ppm,
                                      Vertex2D* vertex2DPtr)
         {
-            const unsigned int i = threadIdx.x;
+            const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
             if (i >= numVertices) { return; }
 
-            meshVertex_t meshVertex = vertex3DPtr[i];
+            meshVertex_t meshVertex = meshVertexPtr[i];
 
             Vector4<float> updatedVertex4D = Vector4<float>(transformMatPtr[meshVertex.meshIdx] *
                                                             meshVertex.coords.toHomogeneous()).normalizeW();
 
             Vector4<float> vertex4DPerspective = Vector4<float>(ppm * updatedVertex4D).normalizeW();
 
-            vertex3DPtr[i] = meshVertex_t({updatedVertex4D.x(), updatedVertex4D.y(), updatedVertex4D.z()},
-                                          meshVertex.meshIdx);
+            meshVertexPtr[i] = meshVertex_t({updatedVertex4D.x(), updatedVertex4D.y(), updatedVertex4D.z()},
+                                            meshVertex.meshIdx);
 
             vertex2DPtr[i] = {vertex4DPerspective.x(), vertex4DPerspective.y()};
         }
 
-        __global__ void geometryShader(const triangleIndices_t* indexPtr,
+        __global__ void geometryShader(const triangleIndices_t* triangleIndPtr,
                                        unsigned int numTriangles,
                                        const Vertex2D* vertex2DPtr,
-                                       const meshVertex_t* vertex3DPtr,
-                                       float* cross2DPtr,
-                                       Vector3<float>* normalPtr,
-                                       boundingBox_t* boundingBoxPtr)
+                                       const meshVertex_t* meshVertexPtr,
+                                       triangleVariables_t* triangleVarsPtr)
         {
-            const unsigned int i = threadIdx.x;
+            const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
             if (i >= numTriangles) { return; }
 
-            triangle2D_t triangle2D = getTriangle2D(indexPtr[i], vertex2DPtr);
-            triangle3D_t triangle3D = getTriangle3D(indexPtr[i], vertex3DPtr);
+            triangleIndices_t tIndRef = triangleIndPtr[i];
+            auto& tVarsRef = triangleVarsPtr[i];
 
-            cross2DPtr[i] = cross2D(triangle2D.p0, triangle2D.p1, triangle2D.p2);
-            normalPtr[i] = triangleNormal(triangle3D);
-            boundingBoxPtr[i] = findBounds(triangle2D);
+            triangle2D_t triangle2D = getTriangle2D(tIndRef, vertex2DPtr);
+            triangle3D_t triangle3D = getTriangle3D(tIndRef, meshVertexPtr);
+
+            tVarsRef.area2x = cross2D(triangle2D.p0, triangle2D.p1, triangle2D.p2);
+            tVarsRef.normal = triangleNormal(triangle3D);
+            tVarsRef.boundingBox = findBounds(triangle2D);
         }
 
-        // TODO: blocking in shared memory
         __global__ void fragmentShader(unsigned int rows,
                                        unsigned int cols,
                                        const triangleIndices_t* indexPtr,
                                        unsigned int numTriangles,
                                        const Vertex2D* vertex2DPtr,
-                                       const meshVertex_t* vertex3DPtr,
-                                       const float* cross2DPtr,
-                                       const Vector3<float>* normalPtr,
-                                       const boundingBox_t* boundingBoxPtr,
-                                       char* characters)
+                                       const meshVertex_t* meshVertexPtr,
+                                       const triangleVariables_t* tVarsPtr,
+                                       char* frameBuffer)
         {
+            __shared__ char sh_memory[D_THREADS_PER_BLOCK * sizeof(fullTriangleInfo_t)];
+
+            auto* sh_triangleInfoPtr = reinterpret_cast<fullTriangleInfo_t*>(sh_memory);
+
             const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
             const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-            if (y >= rows || x >= cols) { return; }
+            const unsigned int sharedMemIdx = threadIdx.x * blockDim.y + threadIdx.y;
+            const unsigned int blocksToLoad = (numTriangles + D_THREADS_PER_BLOCK - 1) / D_THREADS_PER_BLOCK;
 
             fragment_t fragment;
 
-            for (unsigned int k = 0; k < numTriangles; ++k) {
-                triangle2D_t triangle2D = getTriangle2D(indexPtr[k], vertex2DPtr);
-                triangle3D_t triangle3D = getTriangle3D(indexPtr[k], vertex3DPtr);
-                float triangleArea2x = cross2DPtr[k];
-                Vector3<float> normal = normalPtr[k];
-                boundingBox_t boundingBox = boundingBoxPtr[k];
-                barycentricCoords_t bc;
+            for (unsigned int i = 0; i < blocksToLoad; ++i) {
+                const unsigned int globalMemIdx = i * D_THREADS_PER_BLOCK + sharedMemIdx;
 
-                if (triangleArea2x == 0.f) { continue; }
+                if (globalMemIdx < numTriangles) {
+                    triangleIndices_t triangleIndices = indexPtr[globalMemIdx];
+                    auto& sh_tInfoRef = sh_triangleInfoPtr[sharedMemIdx];
 
-                if (inTriangle(triangle2D,
-                               boundingBox,
-                               Vertex2D({static_cast<float>(x), static_cast<float>(y)}),
-                               triangleArea2x,
-                               bc)) {
-                    Vertex3D projectedPoint = getCartesianCoords(triangle3D, bc);
+                    sh_tInfoRef.coords3D = getTriangle3D(triangleIndices, meshVertexPtr);
+                    sh_tInfoRef.coords2D = getTriangle2D(triangleIndices, vertex2DPtr);
+                    sh_tInfoRef.triangleVars = tVarsPtr[globalMemIdx];
+                }
 
-                    if (!fragment.occupied || fragment.coords.z() > projectedPoint.z()) {
-                        fragment.occupied = true;
-                        fragment.coords = projectedPoint;
-                        fragment.normal = normal;
+                __syncthreads();
+
+                if (y < rows && x < cols) {
+                    const unsigned int trianglesInBlock = min(numTriangles - i * D_THREADS_PER_BLOCK,
+                                                              D_THREADS_PER_BLOCK);
+
+                    for (unsigned int j = 0; j < trianglesInBlock; ++j) {
+                        fullTriangleInfo_t tInfo = sh_triangleInfoPtr[j];
+                        barycentricCoords_t bc;
+
+                        if (tInfo.triangleVars.area2x == 0.f) { continue; }
+
+                        if (inTriangle(tInfo.coords2D,
+                                       tInfo.triangleVars.boundingBox,
+                                       Vertex2D({static_cast<float>(x), static_cast<float>(y)}),
+                                       tInfo.triangleVars.area2x,
+                                       bc)) {
+                            Vertex3D projectedPoint = getCartesianCoords(tInfo.coords3D, bc);
+
+                            if (!fragment.occupied || fragment.coords.z() > projectedPoint.z()) {
+                                fragment.occupied = true;
+                                fragment.coords = projectedPoint;
+                                fragment.normal = tInfo.triangleVars.normal;
+                            }
+                        }
                     }
                 }
+
+                __syncthreads();
             }
 
-            characters[y * cols + x] = brightnessToASCII(fragmentBrightness(fragment, g_devLightSource));
+            if (y < rows && x < cols) {
+                frameBuffer[y * cols + x] = brightnessToASCII(fragmentBrightness(fragment, g_devLightSource));
+            }
         }
 
         /* Host auxiliary functions */
-        [[nodiscard]] __host__ PerspectiveProjMatrix CCV2ScreenPPM(unsigned int screenRows,
-                                                                   unsigned int screenCols)
+        [[nodiscard]] __host__ PerspectiveProjectionMatrix CCV2ScreenPPM(unsigned int screenRows,
+                                                                         unsigned int screenCols)
         {
-            return {PerspectiveMatrix(PM_NEAR_PLANE, PM_FAR_PLANE),
-                    OrtProjMatrix(CCV_MIN_CORNER,
-                                  CCV_MAX_CORNER,
-                                  {0.f, 0.f, 0.f},
-                                  {static_cast<float>(screenCols), static_cast<float>(screenRows), 0.f})};
+            return {PerspectiveMatrix(H_PM_NEAR_PLANE, H_PM_FAR_PLANE),
+                    OrthographicProjectionMatrix(H_CCV_MIN_CORNER,
+                                                 H_CCV_MAX_CORNER,
+                                                 {0.f, 0.f, 0.f},
+                                                 {static_cast<float>(screenCols), static_cast<float>(screenRows),
+                                                  0.f})};
         }
 
         __host__ void resizeSceneDependentPtrs(unsigned int numVertices,
@@ -395,10 +447,8 @@ namespace Custosh::Renderer
             getMeshVertexDevPtr().resizeAndDiscardData(numVertices);
             getVertex2DDevPtr().resizeAndDiscardData(numVertices);
 
-            getTriangleDevPtr().resizeAndDiscardData(numTriangles);
-            getBoundingBoxDevPtr().resizeAndDiscardData(numTriangles);
-            getTriangleCross2DDevPtr().resizeAndDiscardData(numTriangles);
-            getTriangleNormalDevPtr().resizeAndDiscardData(numTriangles);
+            getTriangleIndDevPtr().resizeAndDiscardData(numTriangles);
+            getTriangleVarsPtr().resizeAndDiscardData(numTriangles);
 
             getTransformDevPtr().resizeAndDiscardData(numMeshes);
             getTransformHostPtr().resizeAndDiscardData(numMeshes);
@@ -407,68 +457,64 @@ namespace Custosh::Renderer
         __host__ void resizeScreenDependentPtrs(unsigned int screenRows,
                                                 unsigned int screenCols)
         {
-            getCharHostPtr().resizeAndDiscardData(screenRows * screenCols);
-            getCharDevPtr().resizeAndDiscardData(screenRows * screenCols);
+            getFrameBufferHostPtr().resizeAndDiscardData(screenRows * screenCols);
+            getFrameBufferDevPtr().resizeAndDiscardData(screenRows * screenCols);
         }
 
-        __host__ void callVertexShader(const PerspectiveProjMatrix& PPM)
+        __host__ void callVertexShader(const PerspectiveProjectionMatrix& ppm)
         {
             unsigned int numVertices = getMeshVertexDevPtr().size();
 
-            unsigned int threadsPerBlock = std::min(numVertices, static_cast<unsigned int>(THREADS_PER_BLOCK));
+            unsigned int threadsPerBlock = std::min(numVertices, static_cast<unsigned int>(H_THREADS_PER_BLOCK));
             unsigned int numBlocks = (numVertices + threadsPerBlock - 1) / threadsPerBlock;
 
             vertexShader<<<numBlocks, threadsPerBlock>>>(getMeshVertexDevPtr().get(),
                                                          numVertices,
                                                          getTransformDevPtr().get(),
-                                                         PPM,
+                                                         ppm,
                                                          getVertex2DDevPtr().get());
             CUSTOSH_CUDA_CHECK(cudaGetLastError());
         }
 
         __host__ void callGeometryShader()
         {
-            unsigned int numTriangles = getTriangleDevPtr().size();
+            unsigned int numTriangles = getTriangleIndDevPtr().size();
 
-            unsigned int threadsPerBlock = std::min(numTriangles, THREADS_PER_BLOCK);
+            unsigned int threadsPerBlock = std::min(numTriangles, H_THREADS_PER_BLOCK);
             unsigned int numBlocks = (numTriangles + threadsPerBlock - 1) / threadsPerBlock;
 
-            geometryShader<<<numBlocks, threadsPerBlock>>>(getTriangleDevPtr().get(),
+            geometryShader<<<numBlocks, threadsPerBlock>>>(getTriangleIndDevPtr().get(),
                                                            numTriangles,
                                                            getVertex2DDevPtr().get(),
                                                            getMeshVertexDevPtr().get(),
-                                                           getTriangleCross2DDevPtr().get(),
-                                                           getTriangleNormalDevPtr().get(),
-                                                           getBoundingBoxDevPtr().get());
+                                                           getTriangleVarsPtr().get());
             CUSTOSH_CUDA_CHECK(cudaGetLastError());
         }
 
         __host__ void callFragmentShader(unsigned int screenRows,
                                          unsigned int screenCols)
         {
-            unsigned int numTriangles = getTriangleDevPtr().size();
+            unsigned int numTriangles = getTriangleIndDevPtr().size();
 
-            dim3 threadsPerBlock(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y);
+            dim3 threadsPerBlock(H_THREADS_PER_BLOCK_X, H_THREADS_PER_BLOCK_Y);
             dim3 numBlocks((screenCols + threadsPerBlock.x - 1) / threadsPerBlock.x,
                            (screenRows + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
             fragmentShader<<<numBlocks, threadsPerBlock>>>(screenRows,
                                                            screenCols,
-                                                           getTriangleDevPtr().get(),
+                                                           getTriangleIndDevPtr().get(),
                                                            numTriangles,
                                                            getVertex2DDevPtr().get(),
                                                            getMeshVertexDevPtr().get(),
-                                                           getTriangleCross2DDevPtr().get(),
-                                                           getTriangleNormalDevPtr().get(),
-                                                           getBoundingBoxDevPtr().get(),
-                                                           getCharDevPtr().get());
+                                                           getTriangleVarsPtr().get(),
+                                                           getFrameBufferDevPtr().get());
             CUSTOSH_CUDA_CHECK(cudaGetLastError());
         }
 
         __host__ void resetTransformMatrices()
         {
             for (unsigned int i = 0; i < getTransformHostPtr().size(); ++i) {
-                getTransformHostPtr().get()[i] = IDENTITY_MATRIX;
+                getTransformHostPtr().get()[i] = H_IDENTITY_MATRIX;
             }
 
             getTransformHostPtr().loadToDev(getTransformDevPtr().get(), getTransformHostPtr().size());
@@ -481,7 +527,7 @@ namespace Custosh::Renderer
 
         __host__ void renderingPipeline(unsigned int screenRows,
                                         unsigned int screenCols,
-                                        const PerspectiveProjMatrix& ppm)
+                                        const PerspectiveProjectionMatrix& ppm)
         {
             callVertexShader(ppm);
 
@@ -492,12 +538,16 @@ namespace Custosh::Renderer
             CUSTOSH_CUDA_CHECK(cudaDeviceSynchronize());
 
             callFragmentShader(screenRows, screenCols);
+
+            // Host and device will synchronize when copying the frame buffer to host,
+            // but I synchronize them here to accurately measure time.
+            CUSTOSH_DEBUG_CALL(CUSTOSH_CUDA_CHECK(cudaDeviceSynchronize()));
         }
 
-        __host__ void drawChars(unsigned int screenRows,
-                                unsigned int screenCols)
+        __host__ void drawFrameBuffer(unsigned int screenRows,
+                                      unsigned int screenCols)
         {
-            getBackBuffer().draw(getCharHostPtr().get(), screenRows, screenCols);
+            getBackBuffer().draw(getFrameBufferHostPtr().get(), screenRows, screenCols);
             getBackBuffer().activate();
             std::swap(getFrontBuffer(), getBackBuffer());
         }
@@ -509,7 +559,7 @@ namespace Custosh::Renderer
         resizeSceneDependentPtrs(scene.numVertices(), scene.numTriangles(), scene.numMeshes());
 
         scene.loadVerticesToDev(getMeshVertexDevPtr().get());
-        scene.loadTrianglesToDev(getTriangleDevPtr().get());
+        scene.loadTrianglesToDev(getTriangleIndDevPtr().get());
 
         resetTransformMatrices();
 
@@ -534,18 +584,19 @@ namespace Custosh::Renderer
 
         if (screenDim.x() == 0 || screenDim.y() == 0) { return; }
 
-        PerspectiveProjMatrix ppm = CCV2ScreenPPM(screenDim.y(), screenDim.x());
+        PerspectiveProjectionMatrix ppm = CCV2ScreenPPM(screenDim.y(), screenDim.x());
 
         resizeScreenDependentPtrs(screenDim.y(), screenDim.x());
 
         CUSTOSH_DEBUG_LOG_TIME(renderingPipeline(screenDim.y(), screenDim.x(), ppm), "rendering pipeline");
 
         // This is slow, but if I want to draw in the terminal there is no way to bypass the CPU as far as I know.
-        CUSTOSH_DEBUG_LOG_TIME(getCharDevPtr().loadToHost(getCharHostPtr().get(), screenDim.y() * screenDim.x()),
-                               "fetch data from GPU");
+        CUSTOSH_DEBUG_LOG_TIME(
+                getFrameBufferDevPtr().loadToHost(getFrameBufferHostPtr().get(), screenDim.y() * screenDim.x()),
+                "fetch frame buffer from GPU");
 
         // This is currently the biggest bottleneck, but works fine most of the time.
-        CUSTOSH_DEBUG_LOG_TIME(drawChars(screenDim.y(), screenDim.x()), "write to terminal");
+        CUSTOSH_DEBUG_LOG_TIME(drawFrameBuffer(screenDim.y(), screenDim.x()), "write to terminal");
     }
 
 } // Custosh::Renderer

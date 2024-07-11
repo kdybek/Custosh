@@ -20,26 +20,26 @@ set(SOURCES
         src/internal/windows_console_screen_buffer.h
 )
 
-add_library(custosh_lib STATIC ${SOURCES})
+add_library(custosh STATIC ${SOURCES})
 
-set_target_properties(custosh_lib PROPERTIES
+set_target_properties(custosh PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
         CUDA_STANDARD 20
         CXX_STANDARD 20
 )
 
-target_include_directories(custosh_lib PRIVATE "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
+target_include_directories(custosh PRIVATE "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 
-target_include_directories(custosh_lib PUBLIC include)
+target_include_directories(custosh PUBLIC include)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(custosh_lib PRIVATE CUSTOSH_DEBUG)
+    target_compile_definitions(custosh PRIVATE CUSTOSH_DEBUG)
 endif()
 
 add_executable(example examples/example.cpp)
 
 add_executable(test examples/test.cpp)
 
-target_link_libraries(example custosh_lib)
+target_link_libraries(example custosh)
 
-target_link_libraries(test custosh_lib)
+target_link_libraries(test custosh)

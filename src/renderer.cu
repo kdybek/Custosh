@@ -349,16 +349,16 @@ namespace Custosh::Renderer
 
             if (i >= numTriangles) { return; }
 
-            triangleIndices_t tInd = triangleIndPtr[i];
+            triangleIndices_t triangleInd = triangleIndPtr[i];
 
-            triangle2D_t triangle2D = getTriangle2D(tInd, vertex2DPtr);
-            triangle3D_t triangle3D = getTriangle3D(tInd, meshVertexPtr);
+            triangle2D_t triangle2D = getTriangle2D(triangleInd, vertex2DPtr);
+            triangle3D_t triangle3D = getTriangle3D(triangleInd, meshVertexPtr);
 
-            triangleVariables_t tVars(cross2D(triangle2D.p0, triangle2D.p1, triangle2D.p2),
-                                      findBounds(triangle2D),
-                                      triangleNormal(triangle3D));
+            triangleVariables_t triangleVars(cross2D(triangle2D.p0, triangle2D.p1, triangle2D.p2),
+                                             findBounds(triangle2D),
+                                             triangleNormal(triangle3D));
 
-            triangleVarsPtr[i] = tVars;
+            triangleVarsPtr[i] = triangleVars;
         }
 
         __global__ void fragmentShader(unsigned int rows,
@@ -367,7 +367,7 @@ namespace Custosh::Renderer
                                        unsigned int numTriangles,
                                        const Vertex2D* vertex2DPtr,
                                        const meshVertex_t* meshVertexPtr,
-                                       const triangleVariables_t* tVarsPtr,
+                                       const triangleVariables_t* triangleVarsPtr,
                                        char* frameBuffer)
         {
             __shared__ char sh_memory[D_THREADS_PER_BLOCK * sizeof(fullTriangleInfo_t)];
@@ -386,11 +386,11 @@ namespace Custosh::Renderer
 
                 if (globalMemIdx < numTriangles) {
                     triangleIndices_t triangleIndices = triangleIndPtr[globalMemIdx];
-                    fullTriangleInfo_t tInfo(getTriangle3D(triangleIndices, meshVertexPtr),
-                                             getTriangle2D(triangleIndices, vertex2DPtr),
-                                             tVarsPtr[globalMemIdx]);
+                    fullTriangleInfo_t triangleInfo(getTriangle3D(triangleIndices, meshVertexPtr),
+                                                    getTriangle2D(triangleIndices, vertex2DPtr),
+                                                    triangleVarsPtr[globalMemIdx]);
 
-                    sh_triangleInfoPtr[sharedMemIdx] = tInfo;
+                    sh_triangleInfoPtr[sharedMemIdx] = triangleInfo;
                 }
 
                 __syncthreads();
@@ -567,7 +567,8 @@ namespace Custosh::Renderer
         setLightSource(scene.lightSource());
     }
 
-    __host__ void loadTransformMatrix(const TransformMatrix& tm, unsigned int meshIdx)
+    __host__ void loadTransformMatrix(const TransformMatrix& tm,
+                                      unsigned int meshIdx)
     {
         if (meshIdx >= getTransformHostPtr().size()) { throw CustoshException("invalid mesh index"); }
 

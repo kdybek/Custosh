@@ -33,6 +33,7 @@
     } while (0)
 #endif // __CUDA_ARCH__
 
+// Using macros here to undef them at the end of the file.
 #define CUSTOSH_INIT_LIST_ERR_MSG "incorrect initializer list"
 #define CUSTOSH_IDX_ERR_MSG "index out of bounds"
 

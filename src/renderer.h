@@ -8,7 +8,8 @@ namespace Custosh::Renderer
 {
     void loadScene(const Scene& scene);
 
-    void loadTransformMatrix(const TransformMatrix& tm, unsigned int meshIdx);
+    void loadTransformMatrix(const TransformMatrix& tm,
+                             unsigned int meshIdx);
 
     void transformVerticesAndDraw();
 

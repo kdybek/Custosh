@@ -52,7 +52,7 @@ namespace Custosh
         [[nodiscard]] const lightSource_t& lightSource() const;
 
     private:
-        // Hiding the hostPtr class.
+        // Hiding the HostDynamicArray class.
         class SceneImpl;
         std::unique_ptr<SceneImpl> m_implPtr;
 

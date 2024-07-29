@@ -1,5 +1,6 @@
 # Custosh
 
-A 3D ASCII graphics library. Example usage is showcased in the examples folder.
+A 3D ASCII graphics library. Works only on Windows and requires an NVIDIA GPU.
+You need the CUDA Toolkit to build the library.
 
-It works only on Windows and requires an NVIDIA GPU.
+

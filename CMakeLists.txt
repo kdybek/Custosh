@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.28)
 project(Custosh LANGUAGES CUDA CXX)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CUDA_STANDARD_REQUIRED True)
 
 include_directories(include)
 
@@ -24,8 +26,7 @@ add_library(custosh STATIC ${SOURCES})
 
 set_target_properties(custosh PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
-        CUDA_STANDARD 20
-        CXX_STANDARD 20
+        CUDA_RESOLVE_DEVICE_SYMBOLS ON
 )
 
 target_include_directories(custosh PRIVATE "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")

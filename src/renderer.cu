@@ -131,7 +131,7 @@ namespace Custosh::Renderer
                                                        {0.f, 0.f, 0.f, 1.f}};
 
         /* Device constants */
-        __constant__ constexpr char D_ASCII_BY_BRIGHTNESS[93] =
+        __constant__ constexpr char D_ASCII_BY_BRIGHTNESS[] =
                 R"( `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@)";
         __constant__ constexpr unsigned int D_NUM_ASCII = 92;
         __constant__ constexpr unsigned int D_THREADS_PER_BLOCK = H_THREADS_PER_BLOCK;
@@ -315,6 +315,11 @@ namespace Custosh::Renderer
                                 meshVertexPtr[triangleIndices.p2].coords);
         }
 
+        [[nodiscard]] __device__ bool inViewFrustumBounds(const Vertex3D& vertex)
+        {
+            return vertex.z() < H_PM_FAR_PLANE && vertex.z() > H_PM_NEAR_PLANE;
+        }
+
         /* Kernels */
         __global__ void vertexShader(meshVertex_t* meshVertexPtr,
                                      unsigned int numVertices,
@@ -412,7 +417,8 @@ namespace Custosh::Renderer
                                        bc)) {
                             Vertex3D projectedPoint = getCartesianCoords(tInfo.coords3D, bc);
 
-                            if (!fragment.occupied || fragment.coords.z() > projectedPoint.z()) {
+                            if (inViewFrustumBounds(projectedPoint) &&
+                                (!fragment.occupied || fragment.coords.z() > projectedPoint.z())) {
                                 fragment.occupied = true;
                                 fragment.coords = projectedPoint;
                                 fragment.normal = tInfo.triangleVars.normal;

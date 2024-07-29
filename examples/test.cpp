@@ -1,10 +1,10 @@
 /* Performance testing */
 
+#include <custosh.h>
+
 #include <chrono>
 #include <thread>
 #include <random>
-
-#include <custosh.h>
 
 using namespace Custosh;
 

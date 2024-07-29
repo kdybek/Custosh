@@ -1,9 +1,9 @@
 /* API showcase */
 
+#include <custosh.h>
+
 #include <chrono>
 #include <thread>
-
-#include <custosh.h>
 
 using namespace Custosh;
 

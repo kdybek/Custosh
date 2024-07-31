@@ -10,8 +10,6 @@ set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CUDA_STANDARD_REQUIRED True)
 
-include_directories(include)
-
 set(SOURCES
         src/scene.cpp
         src/scene.h

@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.28)
 project(Custosh LANGUAGES CUDA CXX)
 
+if(NOT WIN32)
+    message(FATAL_ERROR "Custosh can only be built on Windows.")
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -29,9 +33,14 @@ set_target_properties(custosh PROPERTIES
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
 )
 
-target_include_directories(custosh PRIVATE "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
+target_include_directories(custosh
+        PRIVATE "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}"
+        INTERFACE include
+)
 
-target_include_directories(custosh PUBLIC include)
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(custosh PRIVATE CUSTOSH_DEBUG)

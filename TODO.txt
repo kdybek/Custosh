@@ -1,0 +1,2 @@
+- The FileLogger creates a log file in the "Release" build type. A possible fix
+could be to create the log file on the first log attempt.

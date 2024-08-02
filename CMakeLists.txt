@@ -5,12 +5,15 @@ if(NOT WIN32)
     message(FATAL_ERROR "Custosh can only be built on Windows.")
 endif()
 
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CUDA_STANDARD_REQUIRED True)
 
-set(SOURCES
+# --- Custosh ---
+set(CUSTOSH_SOURCES
         src/scene.cpp
         src/scene.h
         src/utility.h
@@ -24,7 +27,7 @@ set(SOURCES
         src/internal/windows_console_screen_buffer.h
 )
 
-add_library(custosh STATIC ${SOURCES})
+add_library(custosh STATIC ${CUSTOSH_SOURCES})
 
 set_target_properties(custosh PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
@@ -36,18 +39,26 @@ target_include_directories(custosh
         INTERFACE include
 )
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug)
-endif()
+target_compile_definitions(custosh PRIVATE $<$<CONFIG:Debug>:CUSTOSH_DEBUG>)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(custosh PRIVATE CUSTOSH_DEBUG)
-endif()
+# --- Examples ---
+macro(add_example EXAMPLE_NAME)
 
-add_executable(demo examples/demo.cpp)
+    add_executable(${EXAMPLE_NAME} ${ARGN})
 
-add_executable(test examples/test.cpp)
+    target_link_options(${EXAMPLE_NAME} PRIVATE
+            $<$<CONFIG:Debug>:/NODEFAULTLIB:libcmt.lib>
+            $<$<CONFIG:Release>:/NODEFAULTLIB:libcmtd.lib>
+            /NODEFAULTLIB:msvcrt.lib
+            /NODEFAULTLIB:msvcrtd.lib
+    )
 
-target_link_libraries(demo custosh)
+    target_link_libraries(${EXAMPLE_NAME} custosh)
 
-target_link_libraries(test custosh)
+endmacro()
+
+# --- Demo ---
+add_example(demo examples/demo.cpp)
+
+# --- Test ---
+add_example(test examples/test.cpp)

@@ -587,24 +587,23 @@ namespace Custosh::Renderer
     {
         Vector2<unsigned int> screenDim = getBackBuffer().getWindowDimensions();
 
-        screenDim.x() = std::min(screenDim.x(), screenDim.y());
-        screenDim.y() = std::min(screenDim.x(), screenDim.y());
+        unsigned int minSideLength = std::min(screenDim.x(), screenDim.y());
 
-        if (screenDim.x() == 0 || screenDim.y() == 0) { return; }
+        if (minSideLength == 0) { return; }
 
-        PerspectiveProjectionMatrix ppm = CCV2ScreenPPM(screenDim.y(), screenDim.x());
+        PerspectiveProjectionMatrix ppm = CCV2ScreenPPM(minSideLength, minSideLength);
 
-        resizeScreenDependentPtrs(screenDim.y(), screenDim.x());
+        resizeScreenDependentPtrs(minSideLength, minSideLength);
 
-        CUSTOSH_DEBUG_LOG_TIME(renderingPipeline(screenDim.y(), screenDim.x(), ppm), "rendering pipeline");
+        CUSTOSH_DEBUG_LOG_TIME(renderingPipeline(minSideLength, minSideLength, ppm), "rendering pipeline");
 
         // This is slow, but if I want to draw in the terminal there is no way to bypass the CPU as far as I know.
         CUSTOSH_DEBUG_LOG_TIME(
-                getFrameBufferDevPtr().loadToHost(getFrameBufferHostPtr().get(), screenDim.y() * screenDim.x()),
+                getFrameBufferDevPtr().loadToHost(getFrameBufferHostPtr().get(), minSideLength * minSideLength),
                 "fetch frame buffer from GPU");
 
         // This is currently the biggest bottleneck, but works fine most of the time.
-        CUSTOSH_DEBUG_LOG_TIME(drawFrameBuffer(screenDim.y(), screenDim.x()), "write to terminal");
+        CUSTOSH_DEBUG_LOG_TIME(drawFrameBuffer(minSideLength, minSideLength), "write to terminal");
     }
 
 } // Custosh::Renderer

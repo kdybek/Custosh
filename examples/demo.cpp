@@ -10,7 +10,7 @@ using namespace Custosh;
 void rotatingCubesExample()
 {
     /* *
-     * If you define CMAKE_BUILD_TYPE as "Debug" the library will log performance information.
+     * In the debug configuration the library will log performance information.
      * Warning: time measuring has a noticeable impact on performance.
      * You can specify where to write the logs by adding Loggers.
      * The FileLogger truncates specified files.
@@ -105,7 +105,7 @@ void rotatingCubesExample()
 
     /* *
      * You can specify a transformation which will be applied to the mesh vertices in the vertex shader.
-     * The transformation matrices are 4x4 to be consistent with the perspective projection matrix.
+     * The transformation matrices are 4x4.
      * */
     Renderer::loadTransformMatrix(rotationMat1 * rotationMat2 * rotationMat3, cube1Idx);
 

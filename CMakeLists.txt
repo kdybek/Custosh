@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 project(Custosh LANGUAGES CUDA CXX)
 
 if(NOT WIN32)
-    message(FATAL_ERROR "Custosh can only be built on Windows.")
+    message(FATAL_ERROR "Only Windows is supported.")
 endif()
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")

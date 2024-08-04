@@ -5,6 +5,7 @@
 #include <sstream>
 #include <chrono>
 #include <cassert>
+#include <utility>
 
 #include "custosh_except.h"
 
@@ -53,11 +54,8 @@ namespace Custosh
         std::cout << "[" << getCurrentTime() << "] " << logLevelToString(level) << ": " << message << '\n';
     }
 
-    FileLogger::FileLogger(const std::string& filename) : m_file(filename, std::ios::trunc)
+    FileLogger::FileLogger(std::string filename) : m_filename(std::move(filename))
     {
-        if (!m_file.is_open()) {
-            throw CustoshException("could not open log file");
-        }
     }
 
     FileLogger::~FileLogger()
@@ -67,13 +65,16 @@ namespace Custosh
         }
     }
 
-    FileLogger::FileLogger(FileLogger&& other) noexcept: m_file(std::move(other.m_file))
+    FileLogger::FileLogger(FileLogger&& other) noexcept
+            : m_filename(std::move(other.m_filename)),
+              m_file(std::move(other.m_file))
     {
     }
 
     FileLogger& FileLogger::operator=(FileLogger&& other) noexcept
     {
         if (this != &other) {
+            m_filename = std::move(other.m_filename);
             m_file = std::move(other.m_file);
         }
         return *this;
@@ -81,6 +82,10 @@ namespace Custosh
 
     void FileLogger::log(LogLevel level, const std::string& message)
     {
+        if (!m_file.is_open()) {
+            m_file.open(m_filename, std::ios::trunc);
+        }
+
         m_file << "[" << getCurrentTime() << "] " << logLevelToString(level) << ": " << message << '\n';
     }
 

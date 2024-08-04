@@ -32,7 +32,7 @@ namespace Custosh
     class FileLogger : public Logger
     {
     public:
-        explicit FileLogger(const std::string& filename);
+        explicit FileLogger(std::string  filename);
 
         ~FileLogger() override;
 
@@ -45,6 +45,7 @@ namespace Custosh
         void log(LogLevel level, const std::string& message) override;
 
     private:
+        std::string m_filename;
         std::ofstream m_file;
 
     }; // FileLogger

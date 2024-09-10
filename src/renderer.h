@@ -6,10 +6,10 @@
 
 namespace Custosh::Renderer
 {
-    void loadScene(const Scene& scene);
+    void setScene(const Scene& scene);
 
-    void loadTransformMatrix(const TransformMatrix& tm,
-                             unsigned int meshIdx);
+    void setTransformationMatrix(const TransformationMatrix& tm,
+                                 unsigned int meshIdx);
 
     void transformVerticesAndDraw();
 

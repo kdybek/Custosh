@@ -12,6 +12,7 @@ using namespace Custosh;
 int realMain()
 {
     LoggerManager::addLogger(std::make_unique<ConsoleLogger>(ConsoleLogger()));
+    LoggerManager::addLogger(std::make_unique<FileLogger>("test-log.txt"));
 
     std::vector<Vertex3D> cube1Ver;
     cube1Ver.push_back({-0.5f, -0.5f, 3.f});
@@ -72,17 +73,17 @@ int realMain()
         scene.add(Mesh(res, cubeInd));
     }
 
-    Renderer::loadScene(scene);
+    Renderer::setScene(scene);
 
-    TransformMatrix rotationMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1),
-                                                                origin1);
-    TransformMatrix rotationMat2 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle2),
-                                                                origin1);
-    TransformMatrix rotationMat3 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle3),
-                                                                origin1);
+    TransformationMatrix rotationMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1),
+                                                                     origin1);
+    TransformationMatrix rotationMat2 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle2),
+                                                                     origin1);
+    TransformationMatrix rotationMat3 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle3),
+                                                                     origin1);
 
     for (unsigned int i = 0; i < numCubes; ++i) {
-        Renderer::loadTransformMatrix(rotationMat1 * rotationMat2 * rotationMat3, i);
+        Renderer::setTransformationMatrix(rotationMat1 * rotationMat2 * rotationMat3, i);
     }
 
     Renderer::transformVerticesAndDraw();

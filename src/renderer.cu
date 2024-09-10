@@ -125,10 +125,10 @@ namespace Custosh::Renderer
         constexpr unsigned int H_THREADS_PER_BLOCK_X = 16;
         constexpr unsigned int H_THREADS_PER_BLOCK_Y = 16;
         constexpr unsigned int H_THREADS_PER_BLOCK = H_THREADS_PER_BLOCK_X * H_THREADS_PER_BLOCK_Y;
-        constexpr TransformMatrix H_IDENTITY_MATRIX = {{1.f, 0.f, 0.f, 0.f},
-                                                       {0.f, 1.f, 0.f, 0.f},
-                                                       {0.f, 0.f, 1.f, 0.f},
-                                                       {0.f, 0.f, 0.f, 1.f}};
+        constexpr TransformationMatrix H_IDENTITY_MATRIX = {{1.f, 0.f, 0.f, 0.f},
+                                                            {0.f, 1.f, 0.f, 0.f},
+                                                            {0.f, 0.f, 1.f, 0.f},
+                                                            {0.f, 0.f, 0.f, 1.f}};
 
         /* Device constants */
         __constant__ constexpr char D_ASCII_BY_BRIGHTNESS[] =
@@ -144,13 +144,13 @@ namespace Custosh::Renderer
         /* Host global variables */
         WindowsConsoleScreenBuffer& getFrontBuffer() { static WindowsConsoleScreenBuffer s_frontBuffer; return s_frontBuffer; }
         WindowsConsoleScreenBuffer& getBackBuffer() { static WindowsConsoleScreenBuffer s_backBuffer; return s_backBuffer; }
-        HostPtr<TransformMatrix>& getTransformHostPtr() { static HostPtr<TransformMatrix> s_transformHostPtr(H_BASE_DEV_WSPACE_SIZE); return s_transformHostPtr; }
+        HostPtr<TransformationMatrix>& getTransformationMatrixHostPtr() { static HostPtr<TransformationMatrix> s_transformationMatrixHostPtr(H_BASE_DEV_WSPACE_SIZE); return s_transformationMatrixHostPtr; }
         HostPtr<char>& getFrameBufferHostPtr() { static HostPtr<char> s_frameBufferHostPtr(H_BASE_DEV_WSPACE_SIZE); return s_frameBufferHostPtr; }
 
         /* Device working space pointers */
         DevPtr<meshVertex_t>& getMeshVertexDevPtr() { static DevPtr<meshVertex_t> s_meshVectorDevPtr(H_BASE_DEV_WSPACE_SIZE); return s_meshVectorDevPtr; }
         DevPtr<triangleIndices_t>& getTriangleIndDevPtr() { static DevPtr<triangleIndices_t> s_triangleIndDevPtr(H_BASE_DEV_WSPACE_SIZE); return s_triangleIndDevPtr; }
-        DevPtr<TransformMatrix>& getTransformDevPtr() { static DevPtr<TransformMatrix> s_transformDevPtr(H_BASE_DEV_WSPACE_SIZE); return s_transformDevPtr; }
+        DevPtr<TransformationMatrix>& getTransformationMatrixDevPtr() { static DevPtr<TransformationMatrix> s_transformationMatrixDevPtr(H_BASE_DEV_WSPACE_SIZE); return s_transformationMatrixDevPtr; }
         DevPtr<Vertex2D>& getVertex2DDevPtr() { static DevPtr<Vertex2D> s_vertex2DDevPtr(H_BASE_DEV_WSPACE_SIZE); return s_vertex2DDevPtr; }
         DevPtr<triangleVariables_t>& getTriangleVarsPtr() { static DevPtr<triangleVariables_t> s_triangleVarsPtr(H_BASE_DEV_WSPACE_SIZE); return s_triangleVarsPtr; }
         DevPtr<char>& getFrameBufferDevPtr() { static DevPtr<char> s_frameBufferDevPtr(H_BASE_DEV_WSPACE_SIZE); return s_frameBufferDevPtr; }
@@ -323,7 +323,7 @@ namespace Custosh::Renderer
         /* Kernels */
         __global__ void vertexShader(meshVertex_t* meshVertexPtr,
                                      unsigned int numVertices,
-                                     const TransformMatrix* transformMatPtr,
+                                     const TransformationMatrix* transformationMatrixPtr,
                                      PerspectiveProjectionMatrix ppm,
                                      Vertex2D* vertex2DPtr)
         {
@@ -333,7 +333,7 @@ namespace Custosh::Renderer
 
             meshVertex_t meshVertex = meshVertexPtr[i];
 
-            Vector4<float> updatedVertex4D = Vector4<float>(transformMatPtr[meshVertex.meshIdx] *
+            Vector4<float> updatedVertex4D = Vector4<float>(transformationMatrixPtr[meshVertex.meshIdx] *
                                                             meshVertex.coords.toHomogeneous()).normalizeW();
 
             Vector4<float> vertex4DPerspective = Vector4<float>(ppm * updatedVertex4D).normalizeW();
@@ -457,8 +457,8 @@ namespace Custosh::Renderer
             getTriangleIndDevPtr().resizeAndDiscardData(numTriangles);
             getTriangleVarsPtr().resizeAndDiscardData(numTriangles);
 
-            getTransformDevPtr().resizeAndDiscardData(numMeshes);
-            getTransformHostPtr().resizeAndDiscardData(numMeshes);
+            getTransformationMatrixDevPtr().resizeAndDiscardData(numMeshes);
+            getTransformationMatrixHostPtr().resizeAndDiscardData(numMeshes);
         }
 
         __host__ void resizeScreenDependentPtrs(unsigned int screenRows,
@@ -477,7 +477,7 @@ namespace Custosh::Renderer
 
             vertexShader<<<numBlocks, threadsPerBlock>>>(getMeshVertexDevPtr().get(),
                                                          numVertices,
-                                                         getTransformDevPtr().get(),
+                                                         getTransformationMatrixDevPtr().get(),
                                                          ppm,
                                                          getVertex2DDevPtr().get());
             CUSTOSH_CUDA_CHECK(cudaGetLastError());
@@ -518,13 +518,14 @@ namespace Custosh::Renderer
             CUSTOSH_CUDA_CHECK(cudaGetLastError());
         }
 
-        __host__ void resetTransformMatrices()
+        __host__ void resetTransformationMatrices()
         {
-            for (unsigned int i = 0; i < getTransformHostPtr().size(); ++i) {
-                getTransformHostPtr().get()[i] = H_IDENTITY_MATRIX;
+            for (unsigned int i = 0; i < getTransformationMatrixHostPtr().size(); ++i) {
+                getTransformationMatrixHostPtr().get()[i] = H_IDENTITY_MATRIX;
             }
 
-            getTransformHostPtr().loadToDev(getTransformDevPtr().get(), getTransformHostPtr().size());
+            getTransformationMatrixHostPtr().loadToDev(getTransformationMatrixDevPtr().get(),
+                                                       getTransformationMatrixHostPtr().size());
         }
 
         __host__ void setLightSource(const lightSource_t& ls)
@@ -561,26 +562,27 @@ namespace Custosh::Renderer
 
     } // anonymous
 
-    __host__ void loadScene(const Scene& scene)
+    __host__ void setScene(const Scene& scene)
     {
         resizeSceneDependentPtrs(scene.numVertices(), scene.numTriangles(), scene.numMeshes());
 
         scene.loadVerticesToDev(getMeshVertexDevPtr().get());
         scene.loadTrianglesToDev(getTriangleIndDevPtr().get());
 
-        resetTransformMatrices();
+        resetTransformationMatrices();
 
         setLightSource(scene.lightSource());
     }
 
-    __host__ void loadTransformMatrix(const TransformMatrix& tm,
-                                      unsigned int meshIdx)
+    __host__ void setTransformationMatrix(const TransformationMatrix& tm,
+                                          unsigned int meshIdx)
     {
-        if (meshIdx >= getTransformHostPtr().size()) { throw CustoshException("invalid mesh index"); }
+        if (meshIdx >= getTransformationMatrixHostPtr().size()) { throw CustoshException("invalid mesh index"); }
 
-        getTransformHostPtr().get()[meshIdx] = tm;
+        getTransformationMatrixHostPtr().get()[meshIdx] = tm;
 
-        getTransformHostPtr().loadToDev(getTransformDevPtr().get(), getTransformHostPtr().size());
+        getTransformationMatrixHostPtr().loadToDev(getTransformationMatrixDevPtr().get(),
+                                                   getTransformationMatrixHostPtr().size());
     }
 
     __host__ void transformVerticesAndDraw()

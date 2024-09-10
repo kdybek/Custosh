@@ -617,7 +617,7 @@ namespace Custosh
     /* Aliases */
     using Vertex2D = Vector2<float>;
     using Vertex3D = Vector3<float>;
-    using TransformMatrix = Matrix<float, 4, 4>;
+    using TransformationMatrix = Matrix<float, 4, 4>;
 
     /* Structs */
     struct triangleIndices_t

@@ -16,7 +16,7 @@ void rotatingCubesExample()
      * The FileLogger truncates specified files.
      * */
     LoggerManager::addLogger(std::make_unique<ConsoleLogger>());
-    LoggerManager::addLogger(std::make_unique<FileLogger>("log.txt"));
+    LoggerManager::addLogger(std::make_unique<FileLogger>("demo-log.txt"));
 
     /* *
      * To define a mesh you need to specify the locations of vertices and the triangle vertex indices.
@@ -87,29 +87,28 @@ void rotatingCubesExample()
     unsigned int cube1Idx = scene.add(cube1);
     unsigned int cube2Idx = scene.add(cube2);
 
-    Renderer::loadScene(scene);
+    Renderer::setScene(scene);
 
-    TransformMatrix rotationMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1),
-                                                                origin1);
-    TransformMatrix rotationMat2 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle2),
-                                                                origin1);
-    TransformMatrix rotationMat3 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle3),
-                                                                origin1);
+    TransformationMatrix rotationMat1 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle1),
+                                                                     origin1);
+    TransformationMatrix rotationMat2 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle2),
+                                                                     origin1);
+    TransformationMatrix rotationMat3 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle3),
+                                                                     origin1);
 
-    TransformMatrix rotationMat4 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle1),
-                                                                origin2);
-    TransformMatrix rotationMat5 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle2),
-                                                                origin2);
-    TransformMatrix rotationMat6 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle3),
-                                                                origin2);
+    TransformationMatrix rotationMat4 = DecentralizedTransformMatrix(RotationMatrix(rotationVec2, rotationAngle1),
+                                                                     origin2);
+    TransformationMatrix rotationMat5 = DecentralizedTransformMatrix(RotationMatrix(rotationVec3, rotationAngle2),
+                                                                     origin2);
+    TransformationMatrix rotationMat6 = DecentralizedTransformMatrix(RotationMatrix(rotationVec1, rotationAngle3),
+                                                                     origin2);
 
     /* *
      * You can specify a transformation which will be applied to the mesh vertices in the vertex shader.
-     * The transformation matrices are 4x4.
      * */
-    Renderer::loadTransformMatrix(rotationMat1 * rotationMat2 * rotationMat3, cube1Idx);
+    Renderer::setTransformationMatrix(rotationMat1 * rotationMat2 * rotationMat3, cube1Idx);
 
-    Renderer::loadTransformMatrix(rotationMat4 * rotationMat5 * rotationMat6, cube2Idx);
+    Renderer::setTransformationMatrix(rotationMat4 * rotationMat5 * rotationMat6, cube2Idx);
 
     unsigned int numFrames = 500;
     unsigned int msPerFrame = 15;
